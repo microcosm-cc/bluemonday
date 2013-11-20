@@ -11,6 +11,7 @@ import (
 func sanitizeLink(u *url.URL, v string) string {
 	var p *url.URL
 	var err error
+
 	if u == nil {
 		p, err = url.Parse(v)
 		if err != nil {
@@ -22,6 +23,7 @@ func sanitizeLink(u *url.URL, v string) string {
 			return ""
 		}
 	}
+
 	if !acceptableUriSchemes[p.Scheme] {
 		return ""
 	}
@@ -36,27 +38,35 @@ func sanitizeStyle(v string) string {
 func sanitizeAttributes(u *url.URL, t *html.Token) {
 	var attrs []html.Attribute
 	var isLink = false
+
 	for _, a := range t.Attr {
+
 		if a.Key == "target" {
+
 		} else if a.Key == "style" {
 			a.Val = sanitizeStyle(a.Val)
 			attrs = append(attrs, a)
+
 		} else if acceptableAttributes[a.Key] {
 			if a.Key == "href" || a.Key == "src" {
 				a.Val = sanitizeLink(u, a.Val)
 			}
+
 			if a.Key == "href" {
 				isLink = true
 			}
+
 			attrs = append(attrs, a)
 		}
 	}
+
 	if isLink {
 		attrs = append(attrs, html.Attribute{
 			Key: "target",
 			Val: "_blank",
 		})
 	}
+
 	t.Attr = attrs
 }
 
