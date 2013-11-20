@@ -2,10 +2,11 @@ package bluemonday
 
 import (
 	"bytes"
-	"code.google.com/p/go.net/html"
 	"io"
 	"net/url"
 	"strings"
+
+	"code.google.com/p/go.net/html"
 )
 
 func sanitizeLink(u *url.URL, v string) string {
