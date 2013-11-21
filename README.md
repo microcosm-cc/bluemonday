@@ -3,7 +3,7 @@ Bluemonday
 
 Bluemonday is a HTML sanitizer implemented in Go. You should be able to safely feed it user generated content and it will give back HTML that is scrubbed using a whitelist of approved tags and attributes. It is fast, configurable and is safe for all utf-8 (unicode) input.
 
-The primary purpose of bluemonday is to protect sites against XSS
+The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) whenever user generated content is used.
 
 You should run bluemonday **after** any other processing. So if you use [blackfriday](https://github.com/russross/blackfriday) first then bluemonday should always be the last bit of processing you do. This ensures that no insecurities are introduced later in your process.
 
