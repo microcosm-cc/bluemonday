@@ -7,7 +7,7 @@ The primary purpose of bluemonday is to protect sites against [XSS](http://en.wi
 
 You should run bluemonday **after** any other processing. So if you use [blackfriday](https://github.com/russross/blackfriday) first then bluemonday should always be the last bit of processing you do. This ensures that no insecurities are introduced later in your process.
 
-Bluemonday is inspired by [OWASP Java HTML Sanitizer](https://code.google.com/p/owasp-java-html-sanitizer/) and [HTML Purifier](http://htmlpurifier.org/). Initial groundwork was laid by [Matt Jibson](https://github.com/mjibson) in his [Google Reader Clone](https://github.com/mjibson/goread).
+Bluemonday is inspired by [OWASP Java HTML Sanitizer](https://code.google.com/p/owasp-java-html-sanitizer/) and [HTML Purifier](http://htmlpurifier.org/).
 
 TODO
 ====
