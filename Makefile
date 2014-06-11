@@ -31,11 +31,11 @@ lint:
 	golint $(CODE)
 
 test:
-	go test -v -cover ./...
+	go test -v -covermode=count -coverprofile=coverage.out ./... && \
+	go tool cover -func=coverage.out && rm coverage.out
 
 clean:
-	find $(GOPATH)/bin -name bluemonday -delete
-	find . -name bluemonday -delete
+	find $(GOPATH)/pkg/*/github.com/microcosm-cc -name bluemonday.a -delete
 
 install: clean
 	go install

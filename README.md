@@ -86,9 +86,22 @@ In this early release we are focusing on sanitizing HTML elements and attributes
 TODO
 ====
 
-1. Support p.RequireNoFollowOnLinks()
-1. Support parsing of URLs and URL protocols more intelligently than forcing the developer to write a regexp
-1. Allow the list of HTML elements that are permitted to be empty to be configured
+1. Support p.RequireNoFollowOnLinks() as we're ignoring it right now
+1. Add support for parsing of URLs and URL protocols more intelligently than forcing the developer to write a regexp
+1. Add support for allowing the list of HTML elements that are permitted to be empty to be configured
+
+Development
+===========
+
+We use a Makefile as there's nowt wrong with `make`.
+
+`make` will build, test and install the library.
+
+`make clean` will remove the library from the `${GOPATH}/pkg` directory tree
+
+`make test` will run the tests with coverage
+
+`make lint` will run golint (install via `go get github.com/golang/lint/golint`)
 
 Long term goals
 ===============
