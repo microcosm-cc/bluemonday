@@ -42,10 +42,6 @@ func UGCPolicy() *policy {
 	// Global attributes //
 	///////////////////////
 	p.AllowAttrs(
-		"id",
-	).Matching(regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`)).Globally()
-
-	p.AllowAttrs(
 		"class",
 	).Matching(regexp.MustCompile(`[a-zA-Z0-9\s,\-_]+`)).Globally()
 

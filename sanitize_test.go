@@ -26,21 +26,72 @@ func TestUGCPolicy(t *testing.T) {
 		},
 		// Inline tags featuring globals
 		test{
-			in: `<a href="http://foo.com/" rel="nofollow">Hello, <b>World</b></a>` +
-				`<a href="https://foo.com/#!" rel="nofollow">!</a>`,
-			expected: `<a href="http://foo.com/">Hello, <b>World</b></a>` +
-				`<a href="https://foo.com/#!">!</a>`,
+			// TODO: Need to add rel="nofollow" to this
+			in: `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a>` +
+				`<a href="https://example.org/#!" rel="nofollow">!</a>`,
+			expected: `<a href="http://example.org/">Hello, <b>World</b></a>` +
+				`<a href="https://example.org/#!">!</a>`,
 		},
 		test{
+			// TODO: Need to add rel="nofollow" to this
 			in: `Hello, <b>World</b>` +
-				`<a title="!" href="https://foo.com/#!" rel="nofollow">!</a>`,
+				`<a title="!" href="https://example.org/#!" rel="nofollow">!</a>`,
 			expected: `Hello, <b>World</b>` +
-				`<a title="!" href="https://foo.com/#!">!</a>`,
+				`<a title="!" href="https://example.org/#!">!</a>`,
 		},
 		// Images
 		test{
 			in:       `<a href="javascript:alert(1337)">foo</a>`,
 			expected: `foo`,
+		},
+		test{
+			in:       `<img src="http://example.org/foo.gif">`,
+			expected: `<img src="http://example.org/foo.gif">`,
+		},
+		test{
+			in:       `<img src="http://example.org/x.gif" alt="y" width=96 height=64 border=0>`,
+			expected: `<img src="http://example.org/x.gif" alt="y" width="96" height="64">`,
+		},
+		test{
+			in:       `<img src="http://example.org/x.png" alt="y" width="widgy" height=64 border=0>`,
+			expected: `<img src="http://example.org/x.png" alt="y" height="64">`,
+		},
+		// Anchors
+		// TODO: Need to add rel="nofollow" to all of these
+		// test{
+		// 	// TODO: Need to add support for local links
+		// 	in:       `<a href="foo.html">Link text</a>`,
+		// 	expected: `<a href="foo.html">Link text</a>`,
+		// },
+		// test{
+		// 	// TODO: Need to add support for local links
+		// 	in:       `<a href="foo.html" onclick="alert(1337)">Link text</a>`,
+		// 	expected: `<a href="foo.html">Link text</a>`,
+		// },
+		test{
+			in:       `<a href="http://example.org/x.html" onclick="alert(1337)">Link text</a>`,
+			expected: `<a href="http://example.org/x.html">Link text</a>`,
+		},
+		test{
+			in:       `<a href="https://example.org/x.html" onclick="alert(1337)">Link text</a>`,
+			expected: `<a href="https://example.org/x.html">Link text</a>`,
+		},
+		test{
+			in:       `<a href="HTTPS://example.org/x.html" onclick="alert(1337)">Link text</a>`,
+			expected: `<a href="HTTPS://example.org/x.html">Link text</a>`,
+		},
+		// test{
+		// 	// TODO: Need to add support for protocol links: //example.org
+		// 	in:       `<a href="//example.org/x.html" onclick="alert(1337)">Link text</a>`,
+		// 	expected: `<a href="//example.org/x.html">Link text</a>`,
+		// },
+		test{
+			in:       `<a href="javascript:alert(1337).html" onclick="alert(1337)">Link text</a>`,
+			expected: `Link text`,
+		},
+		test{
+			in:       `<a name="header" id="header">Header text</a>`,
+			expected: `Header text`,
 		},
 	}
 

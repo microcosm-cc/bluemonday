@@ -61,7 +61,7 @@ func (p *policy) Sanitize(s string) (string, error) {
 
 			// Do we have any attributes?
 			if len(token.Attr) == 0 {
-				// Some elements make no sense without attributes, so we strip
+				// Some elements make no sense without attributes, so we skip
 				// those, but anything in this switch is basically permitted
 				// to have no attributes.
 				switch token.Data {
@@ -81,7 +81,7 @@ func (p *policy) Sanitize(s string) (string, error) {
 				}
 			}
 
-			// If we're skipping the closing tag, we should skip the openning
+			// If we're skipping the closing tag, we should skip the opening
 			// one too
 			if !skipClosingTag {
 				cleanHTML.WriteString(token.String())
