@@ -8,8 +8,11 @@ import (
 // policy encapsulates the whitelist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
 type policy struct {
+	// Allows the <!DOCTYPE > tag to exist in the sanitized document
+	allowDocType bool
+
 	// map[htmlElementName] = []attrPolicy
-	elsAndAttrs map[string][]attrPolicy
+	elsAndAttrs map[string]map[string]attrPolicy
 
 	// map[htmlAttributeName] = attrPolicy
 	globalAttrs map[string]attrPolicy
@@ -19,9 +22,6 @@ type policy struct {
 }
 
 type attrPolicy struct {
-	// attribute name to match
-	name string
-
 	// optional pattern to match, when not nil the regexp needs to match
 	// otherwise the attribute is removed
 	regexp *regexp.Regexp
@@ -39,7 +39,7 @@ type attrPolicyBuilder struct {
 // AllowElements() to construct the whitelist of HTML elements and attributes.
 func NewPolicy() *policy {
 	p := policy{}
-	p.elsAndAttrs = make(map[string][]attrPolicy)
+	p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 	p.globalAttrs = make(map[string]attrPolicy)
 
 	return &p
@@ -89,18 +89,15 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *policy {
 		for _, attr := range abp.attrNames {
 
 			if _, ok := abp.p.elsAndAttrs[element]; !ok {
-				abp.p.elsAndAttrs[element] = []attrPolicy{}
+				abp.p.elsAndAttrs[element] = make(map[string]attrPolicy)
 			}
 
-			ap := attrPolicy{name: attr}
+			ap := attrPolicy{}
 			if abp.regexp != nil {
 				ap.regexp = abp.regexp
 			}
 
-			abp.p.elsAndAttrs[element] = append(
-				abp.p.elsAndAttrs[element],
-				ap,
-			)
+			abp.p.elsAndAttrs[element][attr] = ap
 		}
 	}
 
@@ -116,7 +113,7 @@ func (abp *attrPolicyBuilder) Globally() *policy {
 			abp.p.globalAttrs[attr] = attrPolicy{}
 		}
 
-		ap := attrPolicy{name: attr}
+		ap := attrPolicy{}
 		if abp.regexp != nil {
 			ap.regexp = abp.regexp
 		}
@@ -136,7 +133,7 @@ func (p *policy) AllowElements(names ...string) *policy {
 		element = strings.ToLower(element)
 
 		if _, ok := p.elsAndAttrs[element]; !ok {
-			p.elsAndAttrs[element] = []attrPolicy{}
+			p.elsAndAttrs[element] = make(map[string]attrPolicy)
 		}
 	}
 
@@ -145,8 +142,22 @@ func (p *policy) AllowElements(names ...string) *policy {
 
 // RequireNoFollowOnLinks will result in all <a> tags having a rel="nofollow"
 // added to them if one does not already exist
-func (p *policy) RequireNoFollowOnLinks() *policy {
-	p.requireNoFollow = true
+func (p *policy) RequireNoFollowOnLinks(require bool) *policy {
+	p.requireNoFollow = require
+
+	return p
+}
+
+// AllowDocType states whether the HTML sanitised by the sanitizer is allowed to
+// contain the HTML DocType tag: <!DOCTYPE HTML> or one of it's variants.
+//
+// The HTML spec only permits one doctype per document, and as you know how you
+// are using the output of this, you know best as to whether we should ignore it
+// (default) or not.
+//
+// If you are sanitizing a HTML fragment the default (false) is fine.
+func (p *policy) AllowDocType(allow bool) *policy {
+	p.allowDocType = allow
 
 	return p
 }

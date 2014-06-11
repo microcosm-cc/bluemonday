@@ -111,7 +111,7 @@ func UGCPolicy() *policy {
 		"th",
 	)
 
-	p.AllowAttrs("href").OnElements("a").RequireNoFollowOnLinks()
+	p.AllowAttrs("href").OnElements("a").RequireNoFollowOnLinks(true)
 
 	p.AllowAttrs("nowrap").OnElements("td", "th")
 
