@@ -104,21 +104,25 @@ TODO
 Development
 ===========
 
+If you have cloned this repo you will probably need the dependency:
+
+`go get code.google.com/p/go.net/html`
+
 Gophers can use their familiar tools:
 
 `go build`
 
 `go test`
 
-I personally use a Makefile as there's nowt wrong with `make` and it spares typing the same args over and over.
+I personally use a Makefile as it spares typing the same args over and over.
 
 `make` will build (for 64-bit linux), test and install the library.
 
-`make clean` will remove the library from a single `${GOPATH}/pkg` directory tree
+`make clean` will remove the library from a *single* `${GOPATH}/pkg` directory tree
 
 `make test` will run the tests with a coverage report
 
-`make cover` will run the tests and open a browser window with the coverage report
+`make cover` will run the tests and *open a browser window* with the coverage report
 
 `make lint` will run golint (install via `go get github.com/golang/lint/golint`)
 
