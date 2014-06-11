@@ -72,8 +72,10 @@ func (p *policy) Sanitize(s string) (string, error) {
 				case "p":
 				case "span":
 				case "table":
+				case "tbody":
 				case "td":
 				case "th":
+				case "thead":
 				case "tr":
 				case "ul":
 				default:
