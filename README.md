@@ -37,9 +37,13 @@ import (
 
 func main() {
 	p := bluemonday.UGCPolicy()
-	html := p.Sanitize(
+	html, err := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return
+	}
 
 	// Should print:
 	// <a href="http://www.google.com" rel="nofollow">Google</a>
@@ -64,9 +68,13 @@ func main() {
 	p.AllowAttrs("href").OnElements("a")
 	p.AllowElements("p")
 
-	html := p.Sanitize(
+	html, err := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return
+	}
 
 	// Should print:
 	// <a href="http://www.google.com">Google</a>
