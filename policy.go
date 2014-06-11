@@ -26,6 +26,9 @@ type attrPolicyBuilder struct {
 	regexp    *regexp.Regexp
 }
 
+// NewPolicy returns a blank policy with nothing whitelisted or permitted. This
+// is the building block for a policy and you should now use AllowAttrs() and/or
+// AllowElements() to construct the whitelist of HTML elements and attributes.
 func NewPolicy() *policy {
 	p := policy{}
 	p.elsAndAttrs = make(map[string][]attrPolicy)

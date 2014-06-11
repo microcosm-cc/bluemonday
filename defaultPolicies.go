@@ -10,12 +10,14 @@ func StrictPolicy() *policy {
 	return NewPolicy()
 }
 
-// MarkdownUGCPolicy returns a policy aimed at user generated content generated
-// by Markdown. This is expected to be a fairly rich document where as much
-// markup as possible should be retained. Markdown permits raw HTML so we are
-// basically providing a policy to sanitise HTML5 documents safely but with the
-// least intrusion on the expectations of the user.
-func MarkdownUGCPolicy() *policy {
+// UGCPolicy returns a policy aimed at user generated content that is a result
+// of HTML WYSIWYG tools and Markdown conversions.
+//
+// This is expected to be a fairly rich document where as much markup as
+// possible should be retained. Markdown permits raw HTML so we are basically
+// providing a policy to sanitise HTML5 documents safely but with the
+// least intrusion on the formatting expectations of the user.
+func UGCPolicy() *policy {
 	p := NewPolicy()
 
 	// This looks scary but isn't, it's taken from here:
