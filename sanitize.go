@@ -38,7 +38,7 @@ func (p *policy) Sanitize(s string) (string, error) {
 		switch token.Type {
 		case html.DoctypeToken:
 			if p.allowDocType {
-				cleanHTML.WriteString(token.Data)
+				cleanHTML.WriteString(token.String())
 			}
 
 		case html.CommentToken:
