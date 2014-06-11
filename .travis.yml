@@ -4,4 +4,7 @@ go:
   - 1.2
   - tip
 
+install:
+  - go get code.google.com/p/go.net/html
+
 script: go test -v ./...
