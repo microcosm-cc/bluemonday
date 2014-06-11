@@ -1,4 +1,4 @@
-bluemonday
+bluemonday [![Build Status](https://travis-ci.org/microcosm-cc/bluemonday.svg?branch=master)](https://travis-ci.org/microcosm-cc/bluemonday)
 ==========
 
 bluemonday is a HTML sanitizer implemented in Go.
