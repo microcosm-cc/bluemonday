@@ -36,6 +36,7 @@ func UGCPolicy() *policy {
 	number := regexp.MustCompile(`[+-]?(?:(?:[0-9]+(?:\.[0-9]*)?)|\.[0-9]+)`)
 	numOrPercent := regexp.MustCompile(`[0-9]+%?`)
 	paragraph := regexp.MustCompile(`(?:[\p{L}\p{N},'\.\s\-_\(\)]|&[0-9]{2};)*`)
+	standardUrls := regexp.MustCompile(`(?i)^https?|mailto`)
 
 	///////////////////////
 	// Global attributes //
@@ -111,7 +112,7 @@ func UGCPolicy() *policy {
 		"th",
 	)
 
-	p.AllowAttrs("href").OnElements("a").RequireNoFollowOnLinks(true)
+	p.AllowAttrs("href").Matching(standardUrls).OnElements("a").RequireNoFollowOnLinks(true)
 
 	p.AllowAttrs("nowrap").OnElements("td", "th")
 
@@ -127,7 +128,7 @@ func UGCPolicy() *policy {
 
 	p.AllowAttrs("span").Matching(numOrPercent).OnElements("colgroup", "col")
 
-	p.AllowAttrs("src").OnElements("img")
+	p.AllowAttrs("src").Matching(standardUrls).OnElements("img")
 
 	p.AllowAttrs("summary").Matching(paragraph).OnElements("table")
 
@@ -156,6 +157,9 @@ func UGCPolicy() *policy {
 
 	p.AllowAttrs("value", "max").Matching(number).OnElements("progress")
 
+	////////////////////////////////////////////////////
+	// Elements sans-attributes (unless stated above) //
+	////////////////////////////////////////////////////
 	p.AllowElements(
 		"a", "abbr", "acronym", "article", "aside", "b", "bdi", "bdo",
 		"blockquote", "br", "caption", "cite", "code", "col", "colgroup", "del",

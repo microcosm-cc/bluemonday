@@ -9,8 +9,10 @@ import (
 	"code.google.com/p/go.net/html"
 )
 
-// Sanitize takes a string that contains HTML elements and applies the policy
-// whitelist to return a string that has been sanitized by the policy.
+// Sanitize takes a string that contains a HTML fragment or document and applies
+// the given policy whitelist.
+// It returns a HTML string that has been sanitized by the policy or an error if
+// one occurred (most likely as a consequence of malformed input)
 func (p *policy) Sanitize(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -20,8 +22,8 @@ func (p *policy) Sanitize(s string) (string, error) {
 	var cleanHTML bytes.Buffer
 	tokenizer := html.NewTokenizer(strings.NewReader(s))
 
-	depth := 0
 	ignore := false
+	skipClosingTag := false
 	for {
 		if tokenizer.Next() == html.ErrorToken {
 			err := tokenizer.Err()
@@ -44,7 +46,6 @@ func (p *policy) Sanitize(s string) (string, error) {
 			// the output document.
 
 		case html.StartTagToken:
-			depth++
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
@@ -58,22 +59,45 @@ func (p *policy) Sanitize(s string) (string, error) {
 			}
 			token.Attr = attrs
 
-			cleanHTML.WriteString(token.String())
+			// Do we have any attributes?
+			if len(token.Attr) == 0 {
+				// Some elements make no sense without attributes, so we strip
+				// those, but anything in this switch is basically permitted
+				// to have no attributes.
+				switch token.Data {
+				case "b":
+				case "div":
+				case "li":
+				case "ol":
+				case "p":
+				case "span":
+				case "table":
+				case "td":
+				case "th":
+				case "tr":
+				case "ul":
+				default:
+					skipClosingTag = true
+				}
+			}
+
+			// If we're skipping the closing tag, we should skip the openning
+			// one too
+			if !skipClosingTag {
+				cleanHTML.WriteString(token.String())
+			}
 
 		case html.EndTagToken:
-			depth--
+			if skipClosingTag {
+				skipClosingTag = false
+				break
+			}
 
-			aps, ok := p.elsAndAttrs[token.Data]
+			_, ok := p.elsAndAttrs[token.Data]
 			if !ok {
 				ignore = false
 				break
 			}
-
-			attrs, err := sanitizeAttrs(aps, p.globalAttrs, token.Attr)
-			if err != nil {
-				return "", err
-			}
-			token.Attr = attrs
 
 			cleanHTML.WriteString(token.String())
 
@@ -104,6 +128,9 @@ func (p *policy) Sanitize(s string) (string, error) {
 	}
 }
 
+// sanitizeAttrs takes a set of element attribute policies and the global
+// attribute policies and applies them to the []html.Attribute returning a set
+// of html.Attributes that match the policies
 func sanitizeAttrs(
 	aps map[string]attrPolicy,
 	gap map[string]attrPolicy,
@@ -115,18 +142,21 @@ func sanitizeAttrs(
 	cleanAttrs := []html.Attribute{}
 
 	for _, htmlAttr := range attrs {
+		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
+					continue
 				}
 			} else {
 				cleanAttrs = append(cleanAttrs, htmlAttr)
+				continue
 			}
-			continue
 		}
 
-		if ap, ok := aps[htmlAttr.Key]; ok {
+		// Is there a global attribute policy that applies?
+		if ap, ok := gap[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
