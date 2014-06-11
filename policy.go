@@ -2,20 +2,28 @@ package bluemonday
 
 import (
 	"regexp"
+	"strings"
 )
 
 // policy encapsulates the whitelist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
 type policy struct {
+	// map[htmlElementName] = []attrPolicy
 	elsAndAttrs map[string][]attrPolicy
 
+	// map[htmlAttributeName] = attrPolicy
 	globalAttrs map[string]attrPolicy
 
+	// When true, add rel="nofollow" to HTML anchors
 	requireNoFollow bool
 }
 
 type attrPolicy struct {
-	name   string
+	// attribute name to match
+	name string
+
+	// optional pattern to match, when not nil the regexp needs to match
+	// otherwise the attribute is removed
 	regexp *regexp.Regexp
 }
 
@@ -55,7 +63,7 @@ func (p *policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 	abp := attrPolicyBuilder{p: p}
 
 	for _, attrName := range attrNames {
-		abp.attrNames = append(abp.attrNames, attrName)
+		abp.attrNames = append(abp.attrNames, strings.ToLower(attrName))
 	}
 
 	return &abp
@@ -76,7 +84,10 @@ func (abp *attrPolicyBuilder) Matching(regex *regexp.Regexp) *attrPolicyBuilder 
 func (abp *attrPolicyBuilder) OnElements(elements ...string) *policy {
 
 	for _, element := range elements {
+		element = strings.ToLower(element)
+
 		for _, attr := range abp.attrNames {
+
 			if _, ok := abp.p.elsAndAttrs[element]; !ok {
 				abp.p.elsAndAttrs[element] = []attrPolicy{}
 			}
@@ -122,6 +133,8 @@ func (abp *attrPolicyBuilder) Globally() *policy {
 func (p *policy) AllowElements(names ...string) *policy {
 
 	for _, element := range names {
+		element = strings.ToLower(element)
+
 		if _, ok := p.elsAndAttrs[element]; !ok {
 			p.elsAndAttrs[element] = []attrPolicy{}
 		}
