@@ -2,3 +2,5 @@ language: go
 
 go:
   - 1.2
+
+script: go test ./...
