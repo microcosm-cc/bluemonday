@@ -99,7 +99,9 @@ We use a Makefile as there's nowt wrong with `make`.
 
 `make clean` will remove the library from the `${GOPATH}/pkg` directory tree
 
-`make test` will run the tests with coverage
+`make test` will run the tests with a coverage report
+
+`make cover` will run the tests and open a browser window with the coverage report
 
 `make lint` will run golint (install via `go get github.com/golang/lint/golint`)
 

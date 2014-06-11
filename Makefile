@@ -7,12 +7,10 @@
 #   vet:          Vets the code
 #   lint:         Runs lint over the code (you do not need to fix everything)
 #   test:         Runs the tests
+#   cover:        Gives you the URL to a nice test coverage report
 #   clean:        Deletes the built file (if it exists)
 #
 #   install:      Builds, tests and installs the code locally
-
-# Sub-directories containing code to be vetted or linted
-CODE = *.go
 
 # The first target is always the default action if `make` is called without args
 # We clean, build and install into $GOPATH so that it can just be run
@@ -25,14 +23,18 @@ build: clean
 	GOOS=linux GOARCH=amd64 go build
 
 vet:
-	go tool vet $(CODE)
+	go tool vet *.go
 
 lint:
-	golint $(CODE)
+	golint *.go
 
 test:
-	go test -v -covermode=count -coverprofile=coverage.out ./... && \
+	go test -v -covermode=count -coverprofile=coverage.out && \
 	go tool cover -func=coverage.out && rm coverage.out
+
+cover:
+	go test -coverprofile=coverage.out && \
+	go tool cover -html=coverage.out && rm coverage.out
 
 clean:
 	find $(GOPATH)/pkg/*/github.com/microcosm-cc -name bluemonday.a -delete

@@ -5,6 +5,15 @@ import (
 	"testing"
 )
 
+func TestEmpty(t *testing.T) {
+	p := StrictPolicy()
+
+	_, err := p.Sanitize(``)
+	if err == nil {
+		t.Error(err)
+	}
+}
+
 func TestStrictPolicy(t *testing.T) {
 	p := StrictPolicy()
 
