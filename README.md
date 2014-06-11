@@ -32,7 +32,7 @@ import (
 )
 
 func main() {
-	p := bluemonday.MarkdownUGCPolicy()
+	p := bluemonday.UGCPolicy()
 	html := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
@@ -72,7 +72,12 @@ func main() {
 
 We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist.
 
-The other is `bluemonday.MarkdownUGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc.
+The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc.
+
+Limitations
+===========
+
+In this early release we are focusing on sanitizing HTML elements and attributes only. We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression, **you should probably not allow the "style" attribute anywhere**.
 
 TODO
 ====
@@ -82,11 +87,6 @@ The TODO list is extensive and bluemonday should **NOT** be used in production c
 1. ~~Add the ability to describe policies for the sanitization process~~
 1. ~~Bundle a set of default policies that represent safe defaults~~
 1. Add the ability to sanitize based on a policy
-1. Implement and pass the equivalent of the [OWASP Java HTML Sanitizer tests](https://code.google.com/p/owasp-java-html-sanitizer/source/browse/trunk/src/tests/org/owasp/html/) and [AntiSamy](https://code.google.com/p/owaspantisamy/source/browse/Java/antisamy/src/test/java/org/owasp/validator/html/test) tests.
+1. Implement and pass the equivalent of the [OWASP Java HTML Sanitizer](https://code.google.com/p/owasp-java-html-sanitizer/source/browse/trunk/src/tests/org/owasp/html/) and [AntiSamy](https://code.google.com/p/owaspantisamy/source/browse/Java/antisamy/src/test/java/org/owasp/validator/html/test) tests.
 1. Open the code to adversarial peer review similar to the [Attack Review Ground Rules](https://code.google.com/p/owasp-java-html-sanitizer/wiki/AttackReviewGroundRules)
 1. Raise funds and pay for an external security review
-
-Limitations
-===========
-
-In this early release we are focusing on sanitizing HTML elements and attributes only. We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression, **you should probably not allow the "style" attribute anywhere**.
