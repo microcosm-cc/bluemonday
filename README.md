@@ -103,11 +103,17 @@ TODO
 Development
 ===========
 
-We use a Makefile as there's nowt wrong with `make`.
+Gophers can use their familiar tools:
 
-`make` will build, test and install the library.
+`go build`
 
-`make clean` will remove the library from the `${GOPATH}/pkg` directory tree
+`go test`
+
+I personally use a Makefile as there's nowt wrong with `make` and it spares typing the same args over and over.
+
+`make` will build (for 64-bit linux), test and install the library.
+
+`make clean` will remove the library from a single `${GOPATH}/pkg` directory tree
 
 `make test` will run the tests with a coverage report
 
