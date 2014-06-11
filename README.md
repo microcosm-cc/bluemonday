@@ -99,6 +99,7 @@ TODO
 1. Support p.RequireNoFollowOnLinks() as we're ignoring it right now
 1. Add support for parsing of URLs and URL protocols more intelligently than forcing the developer to write a regexp
 1. Add support for allowing the list of HTML elements that are permitted to be empty to be configured
+1. Add support for CSS sanitisation to allow some CSS properties based on a whitelist
 
 Development
 ===========
