@@ -3,9 +3,11 @@ bluemonday
 
 bluemonday is a HTML sanitizer implemented in Go.
 
-You should be able to safely feed it user generated content (UTF-8 strings and HTML) and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes. It is fast enough and highly configurable.
+You should be able to safely feed it user generated content (UTF-8 strings and HTML) and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes. It is fast and highly configurable.
 
-The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) whenever user generated content is used.
+The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver.
+
+Note: It is not the job of bluemonday to fix your bad HTML, it is merely the job of bluemonday to prevent malicious HTML getting through. If you have mismatched HTML elements, or non-conforming nesting of elements, those will remain. But if you have well-structured HTML bluemonday will not break it.
 
 You should **always** run bluemonday **after** any other processing. So if you use [blackfriday](https://github.com/russross/blackfriday) or [Pandoc](http://johnmacfarlane.net/pandoc/) then bluemonday should be run after these steps. This ensures that no insecure HTML is introduced later in your process.
 
@@ -14,7 +16,9 @@ Bluemonday is heavily inspired by both the [OWASP Java HTML Sanitizer](https://c
 Is it production ready yet?
 ===========================
 
-**NO**
+*Maybe*
+
+We are currently passing our tests (including AntiSamy tests). Please see [Issues](https://github.com/microcosm-cc/bluemonday/issues) for any current issues.
 
 Usage
 =====
@@ -82,11 +86,12 @@ In this early release we are focusing on sanitizing HTML elements and attributes
 TODO
 ====
 
-The TODO list is extensive and bluemonday should **NOT** be used in production code at this point, in fact given that the API will change dramatically you probably shouldn't use it all just now.
+1. Support p.RequireNoFollowOnLinks()
+1. Support parsing of URLs and URL protocols more intelligently than forcing the developer to write a regexp
+1. Allow the list of HTML elements that are permitted to be empty to be configured
 
-1. ~~Add the ability to describe policies for the sanitization process~~
-1. ~~Bundle a set of default policies that represent safe defaults~~
-1. Add the ability to sanitize based on a policy
-1. Implement and pass the equivalent of the [OWASP Java HTML Sanitizer](https://code.google.com/p/owasp-java-html-sanitizer/source/browse/trunk/src/tests/org/owasp/html/) and [AntiSamy](https://code.google.com/p/owaspantisamy/source/browse/Java/antisamy/src/test/java/org/owasp/validator/html/test) tests.
+Long term goals
+===============
+
 1. Open the code to adversarial peer review similar to the [Attack Review Ground Rules](https://code.google.com/p/owasp-java-html-sanitizer/wiki/AttackReviewGroundRules)
 1. Raise funds and pay for an external security review
