@@ -20,10 +20,12 @@ Is it production ready yet?
 
 We are currently passing our tests (including AntiSamy tests). Please see [Issues](https://github.com/microcosm-cc/bluemonday/issues) for any current issues.
 
+Our tests may not be complete, we invite pull requests.
+
 Usage
 =====
 
-Install in your $(GOPATH) using `go get -u github.com/microcosm-cc/bluemonday`
+Install in your `${GOPATH}` using `go get -u github.com/microcosm-cc/bluemonday`
 
 Then call it:
 ````
