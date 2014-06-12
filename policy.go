@@ -11,14 +11,14 @@ type policy struct {
 	// Allows the <!DOCTYPE > tag to exist in the sanitized document
 	allowDocType bool
 
-	// map[htmlElementName] = []attrPolicy
-	elsAndAttrs map[string]map[string]attrPolicy
-
-	// map[htmlAttributeName] = attrPolicy
-	globalAttrs map[string]attrPolicy
-
 	// When true, add rel="nofollow" to HTML anchors
 	requireNoFollow bool
+
+	// map[htmlElementName]map[htmlAttributeName]attrPolicy
+	elsAndAttrs map[string]map[string]attrPolicy
+
+	// map[htmlAttributeName]attrPolicy
+	globalAttrs map[string]attrPolicy
 }
 
 type attrPolicy struct {

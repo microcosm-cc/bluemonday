@@ -3,11 +3,17 @@ bluemonday [![Build Status](https://travis-ci.org/microcosm-cc/bluemonday.svg?br
 
 bluemonday is a HTML sanitizer implemented in Go.
 
-You should be able to safely feed it user generated content (UTF-8 strings and HTML) and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes. It is fast and highly configurable.
+Feed it user generated content (UTF-8 strings and HTML) and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes. It is fast and highly configurable.
 
-The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver.
+The default `bluemonday.UGCPolicy().Sanitize()` Turns this:
 
-Note: It is not the job of bluemonday to fix your bad HTML, it is merely the job of bluemonday to prevent malicious HTML getting through. If you have mismatched HTML elements, or non-conforming nesting of elements, those will remain. But if you have well-structured HTML bluemonday will not break it.
+````Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World````
+
+Into the more harmless:
+
+````Hello <a class="XSS"></a>World````
+
+The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the safest thing for someone accepting user generated content is to sanitize user input against a safe list of HTML elements and attributes.
 
 You should **always** run bluemonday **after** any other processing. So if you use [blackfriday](https://github.com/russross/blackfriday) or [Pandoc](http://johnmacfarlane.net/pandoc/) then bluemonday should be run after these steps. This ensures that no insecure HTML is introduced later in your process.
 
@@ -88,10 +94,72 @@ We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thou
 
 The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc.
 
+Policy Building
+===============
+
+The essence of building a policy is to determine which HTML elements and attributes are considered safe for your scenario. OWASP provide an [XSS prevention cheat sheet](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet) to help explain the risks, but essentially:
+
+1. Avoid anything other than plain HTML elements
+1. Avoid `script`, `style`, `iframe`, `object`, `embed`, `base` elements
+1. Avoid anything other than plain HTML elements with simple values that you can match to a regexp
+
+To create a new policy:
+
+````p := bluemonday.NewPolicy()````
+
+To add elements to a policy either add just the elements:
+
+````p.AllowElements("b", "strong")````
+
+Or add elements as a virtue of adding an attribute:
+
+````p.AllowAttrs("nowrap").OnElements("td", "th")````
+
+Attributes can either be added to all elements:
+
+````p.AllowAttrs("dir").Matching(regexp.MustCompile(`(?i)rtl|ltr`)).Globally()````
+
+Or attributes can be added to specific elements:
+
+````p.AllowAttrs("value").OnElements("li")````
+
+It is **always** recommended that an attribute be made to match a pattern. XSS in HTML attributes is very easy otherwise:
+
+````// \p{L} matches unicode letters, \p{N} matches unicode numbers
+p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()````
+
+You can stop at any time and call .Sanitize():
+
+````// string htmlIn passed in from a HTTP POST
+htmlOut, err := p.Sanitize(htmlIn)````
+
+The following are invalid:
+
+````
+// This does not say where the attributes are allowed, you need to add
+// .Globally() or .OnElements(...)
+// This will be ignored without error.
+p.AllowAttrs("value")
+
+// This does not say where the attributes are allowed, you need to add
+// .Globally() or .OnElements(...)
+// This will be ignored without error.
+p.AllowAttrs(
+	"type",
+).Matching(
+	regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`),
+)
+````
+
+Both examples exhibit the same issues, they declared attributes but didn't then specify whether they are whitelisted globally or only on specific elements (and which elements).
+
 Limitations
 ===========
 
-In this early release we are focusing on sanitizing HTML elements and attributes only. We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression, **you should probably not allow the "style" attribute anywhere**.
+In this early release we are focusing on sanitizing HTML elements and attributes only. We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression (inadvisable), **you should not allow the "style" attribute anywhere**.
+
+It is not the job of bluemonday to fix your bad HTML, it is merely the job of bluemonday to prevent malicious HTML getting through. If you have mismatched HTML elements, or non-conforming nesting of elements, those will remain. But if you have well-structured HTML bluemonday will not break it.
+
 
 TODO
 ====

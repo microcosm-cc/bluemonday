@@ -2,6 +2,7 @@ package bluemonday
 
 import (
 	"regexp"
+	"sync"
 	"testing"
 )
 
@@ -615,19 +616,27 @@ func TestAntiSamy(t *testing.T) {
 		},
 	}
 
-	for ii, test := range tests {
-		out, err := p.Sanitize(test.in)
-		if err != nil {
-			t.Error(err)
-		}
-		if out != test.expected {
-			t.Errorf(
-				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-				ii,
-				test.in,
-				out,
-				test.expected,
-			)
-		}
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out, err := p.Sanitize(tt.in)
+			if err != nil {
+				t.Error(err)
+			}
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
 	}
+	wg.Wait()
 }

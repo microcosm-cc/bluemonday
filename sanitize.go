@@ -2,7 +2,6 @@ package bluemonday
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 func (p *policy) Sanitize(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "", fmt.Errorf("Input is empty")
+		return "", ErrEmptyInput
 	}
 
 	var cleanHTML bytes.Buffer
@@ -125,7 +124,7 @@ func (p *policy) Sanitize(s string) (string, error) {
 			}
 
 		default:
-			return "", fmt.Errorf("Not implemented")
+			return "", ErrNotImplemented
 		}
 	}
 }
