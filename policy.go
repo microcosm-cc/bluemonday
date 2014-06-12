@@ -14,6 +14,15 @@ type policy struct {
 	// When true, add rel="nofollow" to HTML anchors
 	requireNoFollow bool
 
+	// When true, URLs must be parseable by "net/url" url.Parse()
+	requireParseableURLs bool
+
+	// When true, u, _ := url.Parse("url"); !u.IsAbs() is permitted
+	allowRelativeURLs bool
+
+	// map[urlScheme]bool
+	urlSchemes map[string]bool
+
 	// map[htmlElementName]map[htmlAttributeName]attrPolicy
 	elsAndAttrs map[string]map[string]attrPolicy
 
@@ -42,6 +51,8 @@ type attrPolicyBuilder struct {
 // AllowElements() to construct the whitelist of HTML elements and attributes.
 func NewPolicy() *policy {
 	p := policy{}
+
+	p.urlSchemes = make(map[string]bool)
 	p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 	p.globalAttrs = make(map[string]attrPolicy)
 	p.elsWithoutAttrs = make(map[string]bool)
@@ -150,6 +161,46 @@ func (p *policy) AllowElements(names ...string) *policy {
 // added to them if one does not already exist
 func (p *policy) RequireNoFollowOnLinks(require bool) *policy {
 	p.requireNoFollow = require
+
+	return p
+}
+
+// RequireParseableURLs will result in all URLs requiring that they be parseable
+// by "net/url" url.Parse()
+// This applies to:
+// - a.href
+// - area.href
+// - blockquote.cite
+// - img.src
+// - link.href
+// - script.src
+func (p *policy) RequireParseableURLs(require bool) *policy {
+	p.requireParseableURLs = require
+
+	return p
+}
+
+// AllowRelativeURLs enables RequireParseableURLs and then permits URLs that
+// are parseable, have no schema information and url.IsAbs() returns false
+// This permits local URLs
+func (p *policy) AllowRelativeURLs(require bool) *policy {
+	p.RequireParseableURLs(true)
+	p.allowRelativeURLs = require
+
+	return p
+}
+
+// AllowURLSchemes will append URL schems to the whitelist
+// Example: p.AllowURLSchemes("mailto", "http", "https")
+func (p *policy) AllowURLSchemes(schemes ...string) *policy {
+
+	for _, scheme := range schemes {
+		scheme = strings.ToLower(scheme)
+
+		if _, ok := p.urlSchemes[scheme]; !ok {
+			p.urlSchemes[scheme] = true
+		}
+	}
 
 	return p
 }

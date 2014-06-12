@@ -74,6 +74,87 @@ func TestAllowDocType(t *testing.T) {
 	}
 }
 
+func TestLinks(t *testing.T) {
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		test{
+			in:       `<a href="http://www.google.com">`,
+			expected: `<a href="http://www.google.com" rel="nofollow">`,
+		},
+		test{
+			in:       `<a href="//www.google.com">`,
+			expected: `<a href="//www.google.com" rel="nofollow">`,
+		},
+		test{
+			in:       `<a href="/www.google.com">`,
+			expected: `<a href="/www.google.com" rel="nofollow">`,
+		},
+		test{
+			in:       `<a href="www.google.com">`,
+			expected: `<a href="www.google.com" rel="nofollow">`,
+		},
+		test{
+			in:       `<a href="javascript:alert(1)">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="#">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="#top">`,
+			expected: `<a href="#top" rel="nofollow">`,
+		},
+		test{
+			in:       `<a href="?">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="?q=1">`,
+			expected: `<a href="?q=1" rel="nofollow">`,
+		},
+		test{
+			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==" alt="Red dot" />`,
+			expected: `<img alt="Red dot"/>`,
+		},
+		test{
+			in:       `<img src="giraffe.gif" />`,
+			expected: `<img src="giraffe.gif"/>`,
+		},
+	}
+
+	p := UGCPolicy()
+	p.RequireParseableURLs(true)
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out, err := p.Sanitize(tt.in)
+			if err != nil {
+				t.Error(err)
+			}
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
 func TestUGCPolicy(t *testing.T) {
 
 	type test struct {
@@ -96,18 +177,12 @@ func TestUGCPolicy(t *testing.T) {
 		},
 		// Inline tags featuring globals
 		test{
-			// TODO: Need to add rel="nofollow" to this
-			in: `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a>` +
-				`<a href="https://example.org/#!" rel="nofollow">!</a>`,
-			expected: `<a href="http://example.org/">Hello, <b>World</b></a>` +
-				`<a href="https://example.org/#!">!</a>`,
+			in:       `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a><a href="https://example.org/#!" rel="nofollow">!</a>`,
+			expected: `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a><a href="https://example.org/#%21" rel="nofollow">!</a>`,
 		},
 		test{
-			// TODO: Need to add rel="nofollow" to this
-			in: `Hello, <b>World</b>` +
-				`<a title="!" href="https://example.org/#!" rel="nofollow">!</a>`,
-			expected: `Hello, <b>World</b>` +
-				`<a title="!" href="https://example.org/#!">!</a>`,
+			in:       `Hello, <b>World</b><a title="!" href="https://example.org/#!" rel="nofollow">!</a>`,
+			expected: `Hello, <b>World</b><a title="!" href="https://example.org/#%21" rel="nofollow">!</a>`,
 		},
 		// Images
 		test{
@@ -127,34 +202,30 @@ func TestUGCPolicy(t *testing.T) {
 			expected: `<img src="http://example.org/x.png" alt="y" height="64">`,
 		},
 		// Anchors
-		// TODO: Need to add rel="nofollow" to all of these
-		// test{
-		// 	// TODO: Need to add support for local links
-		// 	in:       `<a href="foo.html">Link text</a>`,
-		// 	expected: `<a href="foo.html">Link text</a>`,
-		// },
-		// // test{
-		// 	// TODO: Need to add support for local links
-		// 	in:       `<a href="foo.html" onclick="alert(1337)">Link text</a>`,
-		// 	expected: `<a href="foo.html">Link text</a>`,
-		// },
+		test{
+			in:       `<a href="foo.html">Link text</a>`,
+			expected: `<a href="foo.html" rel="nofollow">Link text</a>`,
+		},
+		test{
+			in:       `<a href="foo.html" onclick="alert(1337)">Link text</a>`,
+			expected: `<a href="foo.html" rel="nofollow">Link text</a>`,
+		},
 		test{
 			in:       `<a href="http://example.org/x.html" onclick="alert(1337)">Link text</a>`,
-			expected: `<a href="http://example.org/x.html">Link text</a>`,
+			expected: `<a href="http://example.org/x.html" rel="nofollow">Link text</a>`,
 		},
 		test{
 			in:       `<a href="https://example.org/x.html" onclick="alert(1337)">Link text</a>`,
-			expected: `<a href="https://example.org/x.html">Link text</a>`,
+			expected: `<a href="https://example.org/x.html" rel="nofollow">Link text</a>`,
 		},
 		test{
 			in:       `<a href="HTTPS://example.org/x.html" onclick="alert(1337)">Link text</a>`,
-			expected: `<a href="HTTPS://example.org/x.html">Link text</a>`,
+			expected: `<a href="https://example.org/x.html" rel="nofollow">Link text</a>`,
 		},
-		// test{
-		// 	// TODO: Need to add support for protocol links: //example.org
-		// 	in:       `<a href="//example.org/x.html" onclick="alert(1337)">Link text</a>`,
-		// 	expected: `<a href="//example.org/x.html">Link text</a>`,
-		// },
+		test{
+			in:       `<a href="//example.org/x.html" onclick="alert(1337)">Link text</a>`,
+			expected: `<a href="//example.org/x.html" rel="nofollow">Link text</a>`,
+		},
 		test{
 			in:       `<a href="javascript:alert(1337).html" onclick="alert(1337)">Link text</a>`,
 			expected: `Link text`,
@@ -195,12 +266,8 @@ func TestUGCPolicy(t *testing.T) {
 		},
 		// Ordering
 		test{
-			in: `xss<a href="http://www.google.de" style="color:red;"` +
-				` onmouseover=alert(1) onmousemove="alert(2)" onclick=alert(3)>` +
-				`g<img src="http://example.org"/>oogle</a>`,
-			expected: `xss<a href="http://www.google.de"` +
-				`>` +
-				`g<img src="http://example.org"/>oogle</a>`,
+			in:       `xss<a href="http://www.google.de" style="color:red;" onmouseover=alert(1) onmousemove="alert(2)" onclick=alert(3)>g<img src="http://example.org"/>oogle</a>`,
+			expected: `xss<a href="http://www.google.de" rel="nofollow">g<img src="http://example.org"/>oogle</a>`,
 		},
 	}
 
@@ -223,47 +290,59 @@ func TestUGCPolicy(t *testing.T) {
 	}
 }
 
-// // TODO: Fix bad HTML attributes
-// // Currently fails as disabled on the textarea should be converted to
-// // disabled="disabled" in the HTML rather than disabled=""
-// func TestEmptyAttributes(t *testing.T) {
-//
-// 	p := NewPolicy()
-// 	// Do not do this, especially without a Matching() clause, this is a test
-// 	p.AllowAttrs("disabled").OnElements("textarea")
-// 	p.AllowElements("span", "div")//
-//
-// 	type test struct {
-// 		in       string
-// 		expected string
-// 	}
-//
-// 	tests := []test{
-// 		// Empty elements
-// 		test{
-// 			in: `<textarea>text</textarea><textarea disabled></textarea>` +
-// 				`<div onclick='redirect()'><span>Styled by span</span></div>`,
-// 			expected: `text<textarea disabled="disabled"></textarea>` +
-// 				`<div><span>Styled by span</span></div>`,
-// 		},
-// 	}
-//
-// 	for ii, test := range tests {
-// 		out, err := p.Sanitize(test.in)
-// 		if err != nil {
-// 			t.Error(err)
-// 		}
-// 		if out != test.expected {
-// 			t.Errorf(
-// 				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-// 				ii,
-// 				test.in,
-// 				out,
-// 				test.expected,
-// 			)
-// 		}
-// 	}
-// }
+func TestEmptyAttributes(t *testing.T) {
+
+	p := UGCPolicy()
+	// Do not do this, especially without a Matching() clause, this is a test
+	p.AllowAttrs("disabled").OnElements("textarea")
+
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		// Empty elements
+		test{
+			in: `<textarea>text</textarea><textarea disabled></textarea>` +
+				`<div onclick='redirect()'><span>Styled by span</span></div>`,
+			expected: `<textarea>text</textarea><textarea disabled=""></textarea>` +
+				`<div><span>Styled by span</span></div>`,
+		},
+		test{
+			in:       `foo<br />bar`,
+			expected: `foo<br/>bar`,
+		},
+		test{
+			in:       `foo<br/>bar`,
+			expected: `foo<br/>bar`,
+		},
+		test{
+			in:       `foo<br>bar`,
+			expected: `foo<br>bar`,
+		},
+		test{
+			in:       `foo<hr noshade>bar`,
+			expected: `foo<hr>bar`,
+		},
+	}
+
+	for ii, test := range tests {
+		out, err := p.Sanitize(test.in)
+		if err != nil {
+			t.Error(err)
+		}
+		if out != test.expected {
+			t.Errorf(
+				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				ii,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
 
 func TestAntiSamy(t *testing.T) {
 
@@ -907,7 +986,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       `<IMG SRC="jav&#x0D;ascript:alert('XSS');">`,
-			expected: ``,
+			expected: `<img src="jav%0Dascript:alert%28%27XSS%27%29;">`,
 		},
 		test{
 			in:       `<IMG SRC="jav&#x0A;ascript:alert('XSS');">`,
@@ -937,7 +1016,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       `<IMG SRC=/ onerror="alert(String.fromCharCode(88,83,83))"></img>`,
-			expected: ``,
+			expected: `<img src="/"></img>`,
 		},
 		test{
 			in:       `<IMG onmouseover="alert('xxs')">`,
@@ -945,7 +1024,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       `<IMG SRC= onmouseover="alert('xxs')">`,
-			expected: ``,
+			expected: `<img src="onmouseover=%22alert%28%27xxs%27%29%22">`,
 		},
 		test{
 			in:       `<IMG SRC=# onmouseover="alert('xxs')">`,
@@ -961,7 +1040,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       "<IMG SRC=`javascript:alert(\"RSnake says, 'XSS'\")`>",
-			expected: ``,
+			expected: `<img src="%60javascript:alert%28%22RSnake">`,
 		},
 		test{
 			in:       `<IMG SRC=javascript:alert("XSS")>`,

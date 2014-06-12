@@ -3,6 +3,7 @@ package bluemonday
 import (
 	"bytes"
 	"io"
+	"net/url"
 	"strings"
 
 	"code.google.com/p/go.net/html"
@@ -36,13 +37,14 @@ func (p *policy) Sanitize(s string) (string, error) {
 		token := tokenizer.Token()
 		switch token.Type {
 		case html.DoctypeToken:
+
 			if p.allowDocType {
 				cleanHTML.WriteString(token.String())
 			}
 
 		case html.CommentToken:
-			// Comments are ignored by default, effectively removing them from
-			// the output document.
+
+			// Comments are ignored by default
 
 		case html.StartTagToken:
 
@@ -52,16 +54,11 @@ func (p *policy) Sanitize(s string) (string, error) {
 				break
 			}
 
-			attrs, err := sanitizeAttrs(aps, p.globalAttrs, token.Attr)
-			if err != nil {
-				return "", err
+			if len(token.Attr) != 0 {
+				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
 			}
-			token.Attr = attrs
 
-			// Do we have any attributes?
 			if len(token.Attr) == 0 {
-				// Some elements make no sense without attributes, so we skip
-				// those
 				if !p.allowNoAttrs(token.Data) {
 					skipClosingTag = true
 					break
@@ -71,6 +68,7 @@ func (p *policy) Sanitize(s string) (string, error) {
 			cleanHTML.WriteString(token.String())
 
 		case html.EndTagToken:
+
 			if skipClosingTag {
 				skipClosingTag = false
 				break
@@ -91,11 +89,13 @@ func (p *policy) Sanitize(s string) (string, error) {
 				break
 			}
 
-			attrs, err := sanitizeAttrs(aps, p.globalAttrs, token.Attr)
-			if err != nil {
-				return "", err
+			if len(token.Attr) != 0 {
+				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
 			}
-			token.Attr = attrs
+
+			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
+				break
+			}
 
 			cleanHTML.WriteString(token.String())
 
@@ -114,14 +114,16 @@ func (p *policy) Sanitize(s string) (string, error) {
 // sanitizeAttrs takes a set of element attribute policies and the global
 // attribute policies and applies them to the []html.Attribute returning a set
 // of html.Attributes that match the policies
-func sanitizeAttrs(
-	aps map[string]attrPolicy,
-	gap map[string]attrPolicy,
+func (p *policy) sanitizeAttrs(
+	elementName string,
 	attrs []html.Attribute,
-) (
-	[]html.Attribute,
-	error,
-) {
+	aps map[string]attrPolicy,
+) []html.Attribute {
+
+	if len(attrs) == 0 {
+		return attrs
+	}
+
 	cleanAttrs := []html.Attribute{}
 
 	for _, htmlAttr := range attrs {
@@ -139,7 +141,7 @@ func sanitizeAttrs(
 		}
 
 		// Is there a global attribute policy that applies?
-		if ap, ok := gap[htmlAttr.Key]; ok {
+		if ap, ok := p.globalAttrs[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
@@ -150,10 +152,147 @@ func sanitizeAttrs(
 		}
 	}
 
-	return cleanAttrs, nil
+	if linkable(elementName) && p.requireParseableURLs {
+		// Ensure URLs are parseable:
+		// - a.href
+		// - area.href
+		// - link.href
+		// - blockquote.cite
+		// - img.src
+		// - script.src
+		tmpAttrs := []html.Attribute{}
+		for _, htmlAttr := range cleanAttrs {
+			switch elementName {
+			case "a", "area", "link":
+				if htmlAttr.Key == "href" {
+					if u, ok := p.validURL(htmlAttr.Val); ok {
+						htmlAttr.Val = u
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
+					break
+				}
+				tmpAttrs = append(tmpAttrs, htmlAttr)
+			case "blockquote":
+				if htmlAttr.Key == "cite" {
+					if u, ok := p.validURL(htmlAttr.Val); ok {
+						htmlAttr.Val = u
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
+					break
+				}
+				tmpAttrs = append(tmpAttrs, htmlAttr)
+			case "img", "script":
+				if htmlAttr.Key == "src" {
+					if u, ok := p.validURL(htmlAttr.Val); ok {
+						htmlAttr.Val = u
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
+					break
+				}
+				tmpAttrs = append(tmpAttrs, htmlAttr)
+			default:
+				tmpAttrs = append(tmpAttrs, htmlAttr)
+			}
+		}
+		cleanAttrs = tmpAttrs
+	}
+
+	if linkable(elementName) && p.requireNoFollow && len(cleanAttrs) > 0 {
+		// Add rel="nofollow" if a "href" exists
+		switch elementName {
+		case "a", "area", "link":
+			var hrefFound bool
+			for _, htmlAttr := range cleanAttrs {
+				if htmlAttr.Key == "href" {
+					hrefFound = true
+					continue
+				}
+			}
+
+			if hrefFound {
+				tmpAttrs := []html.Attribute{}
+				var relFound bool
+				var noFollowFound bool
+				for _, htmlAttr := range cleanAttrs {
+					if htmlAttr.Key == "rel" {
+						relFound = true
+						if strings.Contains(htmlAttr.Val, "nofollow") {
+							noFollowFound = true
+							continue
+						}
+
+						htmlAttr.Val += " nofollow"
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					} else {
+
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
+				}
+				if noFollowFound {
+					break
+				}
+				if relFound {
+					cleanAttrs = tmpAttrs
+					break
+				}
+
+				rel := html.Attribute{}
+				rel.Key = "rel"
+				rel.Val = "nofollow"
+				cleanAttrs = append(cleanAttrs, rel)
+			}
+		default:
+		}
+	}
+
+	return cleanAttrs
 }
 
-func (p *policy) allowNoAttrs(attrName string) bool {
-	_, ok := p.elsWithoutAttrs[attrName]
+func (p *policy) allowNoAttrs(elementName string) bool {
+	_, ok := p.elsWithoutAttrs[elementName]
 	return ok
+}
+
+func (p *policy) validURL(rawurl string) (string, bool) {
+	if p.requireParseableURLs {
+		// URLs do not contain whitespace
+		if strings.Contains(rawurl, " ") ||
+			strings.Contains(rawurl, "\t") ||
+			strings.Contains(rawurl, "\n") {
+			return "", false
+		}
+
+		u, err := url.Parse(rawurl)
+		if err != nil {
+			return "", false
+		}
+
+		if u.Scheme != "" {
+			_, ok := p.urlSchemes[u.Scheme]
+			if ok {
+				return u.String(), true
+			}
+
+			return "", false
+		}
+
+		if p.allowRelativeURLs {
+			if u.String() != "" {
+				return u.String(), true
+			}
+		}
+
+		return "", false
+	}
+
+	return rawurl, true
+}
+
+func linkable(elementName string) bool {
+	switch elementName {
+	case "a", "area", "blockquote", "img", "link", "script":
+		return true
+	default:
+		return false
+	}
 }
