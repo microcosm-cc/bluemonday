@@ -640,3 +640,380 @@ func TestAntiSamy(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestXSS(t *testing.T) {
+
+	p := UGCPolicy()
+
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		test{
+			in:       `<A HREF="javascript:document.location='http://www.google.com/'">XSS</A>`,
+			expected: `XSS`,
+		},
+		test{
+			in: `<A HREF="h
+tt	p://6	6.000146.0x7.147/">XSS</A>`,
+			expected: `XSS`,
+		},
+		test{
+			in:       `<SCRIPT>document.write("<SCRI");</SCRIPT>PT SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: `PT SRC=&#34;http://ha.ckers.org/xss.js&#34;&gt;`,
+		},
+		test{
+			in:       `<SCRIPT a=">'>" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       "<SCRIPT a=`>` SRC=\"http://ha.ckers.org/xss.js\"></SCRIPT>",
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT "a='>'" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT a=">" '' SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT =">" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT a=">" SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<HEAD><META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=UTF-7"> </HEAD>+ADw-SCRIPT+AD4-alert('XSS')`,
+			expected: `+ADw-SCRIPT+AD4-alert(&#39;XSS&#39;)`,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="Set-Cookie" Content="USERID=<SCRIPT>alert('XSS')</SCRIPT>">`,
+			expected: ``,
+		},
+		test{
+			in: `<? echo('<SCR)';
+echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
+			expected: `alert(&#34;XSS&#34;)&#39;); ?&gt;`,
+		},
+		test{
+			in:       `<!--#exec cmd="/bin/echo '<SCR'"--><!--#exec cmd="/bin/echo 'IPT SRC=http://ha.ckers.org/xss.js></SCRIPT>'"-->`,
+			expected: ``,
+		},
+		test{
+			in: `<HTML><BODY>
+<?xml:namespace prefix="t" ns="urn:schemas-microsoft-com:time">
+<?import namespace="t" implementation="#default#time2">
+<t:set attributeName="innerHTML" to="XSS<SCRIPT DEFER>alert("XSS")</SCRIPT>">
+</BODY></HTML>`,
+			expected: ``,
+		},
+		test{
+			in: `<XML SRC="xsstest.xml" ID=I></XML>
+<SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML></SPAN>`,
+			expected: `
+<span></span>`,
+		},
+		test{
+			in: `<XML ID="xss"><I><B><IMG SRC="javas<!-- -->cript:alert('XSS')"></B></I></XML>
+<SPAN DATASRC="#xss" DATAFLD="B" DATAFORMATAS="HTML"></SPAN>`,
+			expected: `<i><b></i>
+<span></span>`,
+		},
+		test{
+			in:       `<EMBED SRC="data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dH A6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv MjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hs aW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAw IiBpZD0ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZWNtYXNjcmlwdCI+YWxlcnQoIlh TUyIpOzwvc2NyaXB0Pjwvc3ZnPg==" type="image/svg+xml" AllowScriptAccess="always"></EMBED>`,
+			expected: ``,
+		},
+		test{
+			in:       `<OBJECT TYPE="text/x-scriptlet" DATA="http://ha.ckers.org/scriptlet.html"></OBJECT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<BASE HREF="javascript:alert('XSS');//">`,
+			expected: ``,
+		},
+		test{
+			in:       `<!--[if gte IE 4]><SCRIPT>alert('XSS');</SCRIPT><![endif]-->`,
+			expected: ``,
+		},
+		test{
+			in:       `<DIV STYLE="width: expression(alert('XSS'));">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<DIV STYLE="background-image: url(&#1;javascript:alert('XSS'))">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<DIV STYLE="background-image:\0075\0072\006C\0028'\006a\0061\0076\0061\0073\0063\0072\0069\0070\0074\003a\0061\006c\0065\0072\0074\0028.1027\0058.1053\0053\0027\0029'\0029">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<DIV STYLE="background-image: url(javascript:alert('XSS'))">`,
+			expected: `<div>`,
+		},
+		test{
+			in:       `<TABLE><TD BACKGROUND="javascript:alert('XSS')">`,
+			expected: `<table><td>`,
+		},
+		test{
+			in:       `<TABLE BACKGROUND="javascript:alert('XSS')">`,
+			expected: `<table>`,
+		},
+		test{
+			in:       `<FRAMESET><FRAME SRC="javascript:alert('XSS');"></FRAMESET>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IFRAME SRC=# onmouseover="alert(document.cookie)"></IFRAME>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IFRAME SRC="javascript:alert('XSS');"></IFRAME>`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0; URL=http://;URL=javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0;url=data:text/html base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K">`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="refresh" CONTENT="0;url=javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<XSS STYLE="behavior: url(xss.htc);">`,
+			expected: ``,
+		},
+		test{
+			in:       `<XSS STYLE="xss:expression(alert('XSS'))">`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE type="text/css">BODY{background:url("javascript:alert('XSS')")}</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE TYPE="text/javascript">alert('XSS');</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG STYLE="xss:expr/*XSS*/ession(alert('XSS'))">`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>@im\port'\ja\vasc\ript:alert("XSS")';</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>BODY{-moz-binding:url("http://ha.ckers.org/xssmoz.xml#xss")}</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<META HTTP-EQUIV="Link" Content="<http://ha.ckers.org/xss.css>; REL=stylesheet">`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>@import'http://ha.ckers.org/xss.css';</STYLE>`,
+			expected: ``,
+		},
+		test{
+			in:       `<LINK REL="stylesheet" HREF="http://ha.ckers.org/xss.css">`,
+			expected: ``,
+		},
+		test{
+			in:       `<LINK REL="stylesheet" HREF="javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<BR SIZE="&{alert('XSS')}">`,
+			expected: `<br>`,
+		},
+		test{
+			in:       `<BGSOUND SRC="javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<BODY ONLOAD=alert('XSS')>`,
+			expected: ``,
+		},
+		test{
+			in:       `<STYLE>li {list-style-image: url("javascript:alert('XSS')");}</STYLE><UL><LI>XSS</br>`,
+			expected: `<ul><li>XSS</br>`,
+		},
+		test{
+			in:       `<IMG LOWSRC="javascript:alert('XSS')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG DYNSRC="javascript:alert('XSS')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<BODY BACKGROUND="javascript:alert('XSS')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<INPUT TYPE="IMAGE" SRC="javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `</TITLE><SCRIPT>alert("XSS");</SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `\";alert('XSS');//`,
+			expected: `\&#34;;alert(&#39;XSS&#39;);//`,
+		},
+		test{
+			in:       `<iframe src=http://ha.ckers.org/scriptlet.html <`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT SRC=http://ha.ckers.org/xss.js?< B >`,
+			expected: ``,
+		},
+		test{
+			in:       `<<SCRIPT>alert("XSS");//<</SCRIPT>`,
+			expected: `&lt;`,
+		},
+		test{
+			in:       "<BODY onload!#$%&()*~+-_.,:;?@[/|\\]^`=alert(\"XSS\")>",
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT/SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT/XSS SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=" &#14;  javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC="jav&#x0D;ascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC="jav&#x0A;ascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC="jav&#x09;ascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in: `<IMG SRC="jav	ascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=&#x6A&#x61&#x76&#x61&#x73&#x63&#x72&#x69&#x70&#x74&#x3A&#x61&#x6C&#x65&#x72&#x74&#x28&#x27&#x58&#x53&#x53&#x27&#x29>`,
+			expected: ``,
+		},
+		test{
+			in: `<IMG SRC=&#0000106&#0000097&#0000118&#0000097&#0000115&#0000099&#0000114&#0000105&#0000112&#0000116&#0000058&#0000097&
+#0000108&#0000101&#0000114&#0000116&#0000040&#0000039&#0000088&#0000083&#0000083&#0000039&#0000041>`,
+			expected: ``,
+		},
+		test{
+			in: `<IMG SRC=&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;&#97;&#108;&#101;&#114;&#116;&#40;
+&#39;&#88;&#83;&#83;&#39;&#41;>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=/ onerror="alert(String.fromCharCode(88,83,83))"></img>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG onmouseover="alert('xxs')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC= onmouseover="alert('xxs')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=# onmouseover="alert('xxs')">`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=javascript:alert(String.fromCharCode(88,83,83))>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG """><SCRIPT>alert("XSS")</SCRIPT>">`,
+			expected: ``,
+		},
+		test{
+			in:       "<IMG SRC=`javascript:alert(\"RSnake says, 'XSS'\")`>",
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=javascript:alert("XSS")>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=JaVaScRiPt:alert('XSS')>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC=javascript:alert('XSS')>`,
+			expected: ``,
+		},
+		test{
+			in:       `<IMG SRC="javascript:alert('XSS');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<SCRIPT SRC=http://ha.ckers.org/xss.js></SCRIPT>`,
+			expected: ``,
+		},
+		test{
+			in:       `'';!--"<XSS>=&{()}`,
+			expected: `&#39;&#39;;!--&#34;`,
+		},
+		test{
+			in:       `';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//--></SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>`,
+			expected: `&#39;;alert(String.fromCharCode(88,83,83))//&#39;;alert(String.fromCharCode(88,83,83))//&#34;;alert(String.fromCharCode(88,83,83))//&#34;;alert(String.fromCharCode(88,83,83))//--&gt;&#34;&gt;&#39;&gt;`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out, err := p.Sanitize(tt.in)
+			if err != nil {
+				t.Error(err)
+			}
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
