@@ -266,10 +266,9 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 ## TODO
 
-1. Support p.RequireNoFollowOnLinks() as we're ignoring it right now
-1. Add support for parsing of URLs and URL protocols more intelligently than forcing the developer to write a regexp
 1. Add support for allowing the list of HTML elements that are permitted to be empty to be configured
 1. Add support for CSS sanitisation to allow some CSS properties based on a whitelist
+1. Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that are 90% of what they're looking for and to remove the few things they don't want to make it 100% what they want
 
 ## Development
 
