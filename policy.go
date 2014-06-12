@@ -8,6 +8,7 @@ import (
 // policy encapsulates the whitelist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
 type policy struct {
+
 	// Allows the <!DOCTYPE > tag to exist in the sanitized document
 	allowDocType bool
 
@@ -34,6 +35,7 @@ type policy struct {
 }
 
 type attrPolicy struct {
+
 	// optional pattern to match, when not nil the regexp needs to match
 	// otherwise the attribute is removed
 	regexp *regexp.Regexp
@@ -50,6 +52,7 @@ type attrPolicyBuilder struct {
 // is the building block for a policy and you should now use AllowAttrs() and/or
 // AllowElements() to construct the whitelist of HTML elements and attributes.
 func NewPolicy() *policy {
+
 	p := policy{}
 
 	p.urlSchemes = make(map[string]bool)
@@ -175,6 +178,7 @@ func (p *policy) RequireNoFollowOnLinks(require bool) *policy {
 // - link.href
 // - script.src
 func (p *policy) RequireParseableURLs(require bool) *policy {
+
 	p.requireParseableURLs = require
 
 	return p
@@ -184,6 +188,7 @@ func (p *policy) RequireParseableURLs(require bool) *policy {
 // are parseable, have no schema information and url.IsAbs() returns false
 // This permits local URLs
 func (p *policy) AllowRelativeURLs(require bool) *policy {
+
 	p.RequireParseableURLs(true)
 	p.allowRelativeURLs = require
 
@@ -193,6 +198,8 @@ func (p *policy) AllowRelativeURLs(require bool) *policy {
 // AllowURLSchemes will append URL schems to the whitelist
 // Example: p.AllowURLSchemes("mailto", "http", "https")
 func (p *policy) AllowURLSchemes(schemes ...string) *policy {
+
+	p.RequireParseableURLs(true)
 
 	for _, scheme := range schemes {
 		scheme = strings.ToLower(scheme)
@@ -214,6 +221,7 @@ func (p *policy) AllowURLSchemes(schemes ...string) *policy {
 //
 // If you are sanitizing a HTML fragment the default (false) is fine.
 func (p *policy) AllowDocType(allow bool) *policy {
+
 	p.allowDocType = allow
 
 	return p
@@ -224,6 +232,7 @@ func (p *policy) AllowDocType(allow bool) *policy {
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
 // is mandatory
 func (p *policy) addDefaultElsWithoutAttrs() {
+
 	p.elsWithoutAttrs["abbr"] = true
 	p.elsWithoutAttrs["acronym"] = true
 	p.elsWithoutAttrs["article"] = true
@@ -308,4 +317,5 @@ func (p *policy) addDefaultElsWithoutAttrs() {
 	p.elsWithoutAttrs["var"] = true
 	p.elsWithoutAttrs["video"] = true
 	p.elsWithoutAttrs["wbr"] = true
+
 }
