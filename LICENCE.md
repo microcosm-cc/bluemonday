@@ -1,4 +1,4 @@
-Copyright (c) 2014, David Kitchen
+Copyright (c) 2014, David Kitchen <david@buro9.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
