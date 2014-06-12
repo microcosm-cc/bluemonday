@@ -11,12 +11,13 @@ import (
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
 // the given policy whitelist.
-// It returns a HTML string that has been sanitized by the policy or an error if
-// one occurred (most likely as a consequence of malformed input)
-func (p *policy) Sanitize(s string) (string, error) {
+// It returns a HTML string that has been sanitized by the policy or an empty
+// string if an error has occurred (most likely as a consequence of extremely
+// malformed input)
+func (p *policy) Sanitize(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "", ErrEmptyInput
+		return ""
 	}
 
 	var cleanHTML bytes.Buffer
@@ -29,9 +30,11 @@ func (p *policy) Sanitize(s string) (string, error) {
 			err := tokenizer.Err()
 			if err == io.EOF {
 				// End of input means end of processing
-				return cleanHTML.String(), nil
+				return cleanHTML.String()
 			}
-			return "", err
+
+			// Raw tokenizer error
+			return ""
 		}
 
 		token := tokenizer.Token()
@@ -106,7 +109,8 @@ func (p *policy) Sanitize(s string) (string, error) {
 			}
 
 		default:
-			return "", ErrNotImplemented
+			// A token that didn't exist in the html package when we wrote this
+			return ""
 		}
 	}
 }

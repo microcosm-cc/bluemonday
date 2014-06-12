@@ -9,9 +9,8 @@ import (
 func TestEmpty(t *testing.T) {
 	p := StrictPolicy()
 
-	_, err := p.Sanitize(``)
-	if err == nil {
-		t.Error(err)
+	if "" != p.Sanitize(``) {
+		t.Error("Empty string is not empty")
 	}
 }
 
@@ -20,11 +19,7 @@ func TestStrictPolicy(t *testing.T) {
 
 	in := "Hello, <b>World</b>!"
 	expected := "Hello, !"
-
-	out, err := p.Sanitize(in)
-	if err != nil {
-		t.Error(err)
-	}
+	out := p.Sanitize(in)
 	if out != expected {
 		t.Errorf(
 			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -42,10 +37,7 @@ func TestAllowDocType(t *testing.T) {
 	in := "<!DOCTYPE html>Hello, <b>World</b>!"
 	expected := "Hello, <b>World</b>!"
 
-	out, err := p.Sanitize(in)
-	if err != nil {
-		t.Error(err)
-	}
+	out := p.Sanitize(in)
 	if out != expected {
 		t.Errorf(
 			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -60,10 +52,7 @@ func TestAllowDocType(t *testing.T) {
 
 	expected = "<!DOCTYPE html>Hello, <b>World</b>!"
 
-	out, err = p.Sanitize(in)
-	if err != nil {
-		t.Error(err)
-	}
+	out = p.Sanitize(in)
 	if out != expected {
 		t.Errorf(
 			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -136,10 +125,7 @@ func TestLinks(t *testing.T) {
 	wg.Add(len(tests))
 	for ii, tt := range tests {
 		go func(ii int, tt test) {
-			out, err := p.Sanitize(tt.in)
-			if err != nil {
-				t.Error(err)
-			}
+			out := p.Sanitize(tt.in)
 			if out != tt.expected {
 				t.Errorf(
 					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -274,10 +260,7 @@ func TestUGCPolicy(t *testing.T) {
 	p := UGCPolicy()
 
 	for ii, test := range tests {
-		out, err := p.Sanitize(test.in)
-		if err != nil {
-			t.Error(err)
-		}
+		out := p.Sanitize(test.in)
 		if out != test.expected {
 			t.Errorf(
 				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -328,10 +311,7 @@ func TestEmptyAttributes(t *testing.T) {
 	}
 
 	for ii, test := range tests {
-		out, err := p.Sanitize(test.in)
-		if err != nil {
-			t.Error(err)
-		}
+		out := p.Sanitize(test.in)
 		if out != test.expected {
 			t.Errorf(
 				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -701,10 +681,7 @@ func TestAntiSamy(t *testing.T) {
 	wg.Add(len(tests))
 	for ii, tt := range tests {
 		go func(ii int, tt test) {
-			out, err := p.Sanitize(tt.in)
-			if err != nil {
-				t.Error(err)
-			}
+			out := p.Sanitize(tt.in)
 			if out != tt.expected {
 				t.Errorf(
 					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -1078,10 +1055,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 	wg.Add(len(tests))
 	for ii, tt := range tests {
 		go func(ii int, tt test) {
-			out, err := p.Sanitize(tt.in)
-			if err != nil {
-				t.Error(err)
-			}
+			out := p.Sanitize(tt.in)
 			if out != tt.expected {
 				t.Errorf(
 					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",

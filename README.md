@@ -77,13 +77,9 @@ import (
 
 func main() {
 	p := bluemonday.UGCPolicy()
-	html, err := p.Sanitize(
+	html := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
-	if err != nil {
-		fmt.Printf("Error: %+v\n", err)
-		return
-	}
 
 	// Should print:
 	// <a href="http://www.google.com" rel="nofollow">Google</a>
@@ -108,13 +104,9 @@ func main() {
 	p.AllowAttrs("href").OnElements("a")
 	p.AllowElements("p")
 
-	html, err := p.Sanitize(
+	html := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
-	if err != nil {
-		fmt.Printf("Error: %+v\n", err)
-		return
-	}
 
 	// Should print:
 	// <a href="http://www.google.com">Google</a>
@@ -175,7 +167,7 @@ You can stop at any time and call .Sanitize():
 
 ```go
 // string htmlIn passed in from a HTTP POST
-htmlOut, err := p.Sanitize(htmlIn)
+htmlOut := p.Sanitize(htmlIn)
 ```
 
 And you can take any existing policy and extend it:
