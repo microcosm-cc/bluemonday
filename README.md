@@ -205,7 +205,7 @@ This will ensure that URLs are not considered invalid by Go's `net/url` package.
 p.RequireParseableURLs(true)
 ```
 
-If you have enabled parseable URLs then the following option will allow relative URLs. By default this is disabled and will prevent all local and schema relative URLs (i.e. href="//www.google.com" is schema relative).
+If you have enabled parseable URLs then the following option will allow relative URLs. By default this is disabled and will prevent all local and schema relative URLs (i.e. `href="//www.google.com"` is schema relative).
 
 ```go
 p.AllowRelativeURLs(true)
