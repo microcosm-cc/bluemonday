@@ -29,8 +29,7 @@ lint:
 	golint *.go
 
 test:
-	go test -v -covermode=count -coverprofile=coverage.out && \
-	go tool cover -func=coverage.out && rm coverage.out
+	go test -v ./...
 
 cover:
 	go test -coverprofile=coverage.out && \

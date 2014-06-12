@@ -61,32 +61,14 @@ func (p *policy) Sanitize(s string) (string, error) {
 			// Do we have any attributes?
 			if len(token.Attr) == 0 {
 				// Some elements make no sense without attributes, so we skip
-				// those, but anything in this switch is basically permitted
-				// to have no attributes.
-				switch token.Data {
-				case "b":
-				case "div":
-				case "li":
-				case "ol":
-				case "p":
-				case "span":
-				case "table":
-				case "tbody":
-				case "td":
-				case "th":
-				case "thead":
-				case "tr":
-				case "ul":
-				default:
+				// those
+				if !p.allowNoAttrs(token.Data) {
 					skipClosingTag = true
+					break
 				}
 			}
 
-			// If we're skipping the closing tag, we should skip the opening
-			// one too
-			if !skipClosingTag {
-				cleanHTML.WriteString(token.String())
-			}
+			cleanHTML.WriteString(token.String())
 
 		case html.EndTagToken:
 			if skipClosingTag {
@@ -169,4 +151,9 @@ func sanitizeAttrs(
 	}
 
 	return cleanAttrs, nil
+}
+
+func (p *policy) allowNoAttrs(attrName string) bool {
+	_, ok := p.elsWithoutAttrs[attrName]
+	return ok
 }

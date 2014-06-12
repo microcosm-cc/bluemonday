@@ -19,6 +19,9 @@ type policy struct {
 
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
+
+	// map[htmlElementName]bool
+	elsWithoutAttrs map[string]bool
 }
 
 type attrPolicy struct {
@@ -41,6 +44,9 @@ func NewPolicy() *policy {
 	p := policy{}
 	p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 	p.globalAttrs = make(map[string]attrPolicy)
+	p.elsWithoutAttrs = make(map[string]bool)
+
+	p.addDefaultElsWithoutAttrs()
 
 	return &p
 }
@@ -160,4 +166,95 @@ func (p *policy) AllowDocType(allow bool) *policy {
 	p.allowDocType = allow
 
 	return p
+}
+
+// addDefaultElsWithoutAttrs adds the HTML elements that we know are valid
+// without any attributes to an internal map.
+// i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
+// is mandatory
+func (p *policy) addDefaultElsWithoutAttrs() {
+	p.elsWithoutAttrs["abbr"] = true
+	p.elsWithoutAttrs["acronym"] = true
+	p.elsWithoutAttrs["article"] = true
+	p.elsWithoutAttrs["aside"] = true
+	p.elsWithoutAttrs["audio"] = true
+	p.elsWithoutAttrs["b"] = true
+	p.elsWithoutAttrs["bdi"] = true
+	p.elsWithoutAttrs["blockquote"] = true
+	p.elsWithoutAttrs["body"] = true
+	p.elsWithoutAttrs["br"] = true
+	p.elsWithoutAttrs["button"] = true
+	p.elsWithoutAttrs["canvas"] = true
+	p.elsWithoutAttrs["caption"] = true
+	p.elsWithoutAttrs["cite"] = true
+	p.elsWithoutAttrs["code"] = true
+	p.elsWithoutAttrs["col"] = true
+	p.elsWithoutAttrs["colgroup"] = true
+	p.elsWithoutAttrs["datalist"] = true
+	p.elsWithoutAttrs["dd"] = true
+	p.elsWithoutAttrs["del"] = true
+	p.elsWithoutAttrs["details"] = true
+	p.elsWithoutAttrs["dfn"] = true
+	p.elsWithoutAttrs["div"] = true
+	p.elsWithoutAttrs["dl"] = true
+	p.elsWithoutAttrs["dt"] = true
+	p.elsWithoutAttrs["em"] = true
+	p.elsWithoutAttrs["fieldset"] = true
+	p.elsWithoutAttrs["figcaption"] = true
+	p.elsWithoutAttrs["figure"] = true
+	p.elsWithoutAttrs["footer"] = true
+	p.elsWithoutAttrs["h1"] = true
+	p.elsWithoutAttrs["h2"] = true
+	p.elsWithoutAttrs["h3"] = true
+	p.elsWithoutAttrs["h4"] = true
+	p.elsWithoutAttrs["h5"] = true
+	p.elsWithoutAttrs["h6"] = true
+	p.elsWithoutAttrs["head"] = true
+	p.elsWithoutAttrs["header"] = true
+	p.elsWithoutAttrs["hgroup"] = true
+	p.elsWithoutAttrs["hr"] = true
+	p.elsWithoutAttrs["html"] = true
+	p.elsWithoutAttrs["i"] = true
+	p.elsWithoutAttrs["ins"] = true
+	p.elsWithoutAttrs["kbd"] = true
+	p.elsWithoutAttrs["li"] = true
+	p.elsWithoutAttrs["mark"] = true
+	p.elsWithoutAttrs["nav"] = true
+	p.elsWithoutAttrs["ol"] = true
+	p.elsWithoutAttrs["optgroup"] = true
+	p.elsWithoutAttrs["option"] = true
+	p.elsWithoutAttrs["p"] = true
+	p.elsWithoutAttrs["pre"] = true
+	p.elsWithoutAttrs["q"] = true
+	p.elsWithoutAttrs["rp"] = true
+	p.elsWithoutAttrs["rt"] = true
+	p.elsWithoutAttrs["ruby"] = true
+	p.elsWithoutAttrs["s"] = true
+	p.elsWithoutAttrs["samp"] = true
+	p.elsWithoutAttrs["section"] = true
+	p.elsWithoutAttrs["select"] = true
+	p.elsWithoutAttrs["small"] = true
+	p.elsWithoutAttrs["span"] = true
+	p.elsWithoutAttrs["strike"] = true
+	p.elsWithoutAttrs["strong"] = true
+	p.elsWithoutAttrs["style"] = true
+	p.elsWithoutAttrs["sub"] = true
+	p.elsWithoutAttrs["summary"] = true
+	p.elsWithoutAttrs["sup"] = true
+	p.elsWithoutAttrs["svg"] = true
+	p.elsWithoutAttrs["table"] = true
+	p.elsWithoutAttrs["tbody"] = true
+	p.elsWithoutAttrs["td"] = true
+	p.elsWithoutAttrs["textarea"] = true
+	p.elsWithoutAttrs["tfoot"] = true
+	p.elsWithoutAttrs["th"] = true
+	p.elsWithoutAttrs["thead"] = true
+	p.elsWithoutAttrs["time"] = true
+	p.elsWithoutAttrs["tr"] = true
+	p.elsWithoutAttrs["tt"] = true
+	p.elsWithoutAttrs["u"] = true
+	p.elsWithoutAttrs["ul"] = true
+	p.elsWithoutAttrs["var"] = true
+	p.elsWithoutAttrs["video"] = true
+	p.elsWithoutAttrs["wbr"] = true
 }

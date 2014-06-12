@@ -14,7 +14,7 @@ Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CL
 Into the more harmless:
 
 ```html
-Hello <a class="XSS"></a>World
+Hello World
 ```
 
 The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the safest thing for someone accepting user generated content is to sanitize user input against a safe list of HTML elements and attributes.

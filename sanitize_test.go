@@ -161,7 +161,7 @@ func TestUGCPolicy(t *testing.T) {
 		},
 		test{
 			in:       `<a name="header" id="header">Header text</a>`,
-			expected: `Header text`,
+			expected: `<a id="header">Header text</a>`,
 		},
 		// Tables
 		test{
