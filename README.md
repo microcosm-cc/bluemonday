@@ -7,11 +7,15 @@ Feed it user generated content (UTF-8 strings and HTML) and it will give back HT
 
 The default `bluemonday.UGCPolicy().Sanitize()` Turns this:
 
-````Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World````
+```html
+Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World
+```
 
 Into the more harmless:
 
-````Hello <a class="XSS"></a>World````
+```html
+Hello <a class="XSS"></a>World
+```
 
 The primary purpose of bluemonday is to protect sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the safest thing for someone accepting user generated content is to sanitize user input against a safe list of HTML elements and attributes.
 
@@ -34,7 +38,7 @@ Usage
 Install in your `${GOPATH}` using `go get -u github.com/microcosm-cc/bluemonday`
 
 Then call it:
-````
+```go
 package main
 
 import (
@@ -57,10 +61,10 @@ func main() {
 	// <a href="http://www.google.com" rel="nofollow">Google</a>
 	fmt.Println(html)
 }
-````
+```
 
 You can build your own policies:
-````
+```go
 package main
 
 import (
@@ -88,7 +92,7 @@ func main() {
 	// <a href="http://www.google.com">Google</a>
 	fmt.Println(html)
 }
-````
+```
 
 We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist.
 
@@ -105,37 +109,51 @@ The essence of building a policy is to determine which HTML elements and attribu
 
 To create a new policy:
 
-````p := bluemonday.NewPolicy()````
+```go
+p := bluemonday.NewPolicy()
+```
 
 To add elements to a policy either add just the elements:
 
-````p.AllowElements("b", "strong")````
+```go
+p.AllowElements("b", "strong")
+```
 
 Or add elements as a virtue of adding an attribute:
 
-````p.AllowAttrs("nowrap").OnElements("td", "th")````
+```go
+p.AllowAttrs("nowrap").OnElements("td", "th")
+```
 
 Attributes can either be added to all elements:
 
-````p.AllowAttrs("dir").Matching(regexp.MustCompile(`(?i)rtl|ltr`)).Globally()````
+```go
+p.AllowAttrs("dir").Matching(regexp.MustCompile("(?i)rtl|ltr")).Globally()
+```
 
 Or attributes can be added to specific elements:
 
-````p.AllowAttrs("value").OnElements("li")````
+```go
+p.AllowAttrs("value").OnElements("li")
+```
 
 It is **always** recommended that an attribute be made to match a pattern. XSS in HTML attributes is very easy otherwise:
 
-````// \p{L} matches unicode letters, \p{N} matches unicode numbers
-p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()````
+```go
+// \p{L} matches unicode letters, \p{N} matches unicode numbers
+p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()
+```
 
 You can stop at any time and call .Sanitize():
 
-````// string htmlIn passed in from a HTTP POST
-htmlOut, err := p.Sanitize(htmlIn)````
+```go
+// string htmlIn passed in from a HTTP POST
+htmlOut, err := p.Sanitize(htmlIn)
+```
 
 The following are invalid:
 
-````
+```go
 // This does not say where the attributes are allowed, you need to add
 // .Globally() or .OnElements(...)
 // This will be ignored without error.
@@ -147,9 +165,9 @@ p.AllowAttrs("value")
 p.AllowAttrs(
 	"type",
 ).Matching(
-	regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`),
+	regexp.MustCompile("(?i)circle|disc|square|a|A|i|I|1"),
 )
-````
+```
 
 Both examples exhibit the same issues, they declared attributes but didn't then specify whether they are whitelisted globally or only on specific elements (and which elements).
 
