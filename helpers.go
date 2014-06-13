@@ -1,3 +1,32 @@
+// Copyright (c) 2014, David Kitchen <david@buro9.com>
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// * Neither the name of the organisation (Microcosm) nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package bluemonday
 
 import (
@@ -36,7 +65,7 @@ var (
 // on "a", "area" and "link" (if you have allowed those elements) and will
 // ensure that the URL values are parseable and either relative or belong to the
 // "mailto", "http", or "https" schemes
-func (p *policy) AllowStandardURLs() {
+func (p *Policy) AllowStandardURLs() {
 	// URLs must be parseable by net/url.Parse()
 	p.RequireParseableURLs(true)
 
@@ -53,7 +82,7 @@ func (p *policy) AllowStandardURLs() {
 
 // AllowStandardAttributes will enable "id", "title" and the language specific
 // attributes "dir" and "lang" on all elements that are whitelisted
-func (p *policy) AllowStandardAttributes() {
+func (p *Policy) AllowStandardAttributes() {
 	// "dir" "lang" are permitted as both language attributes affect charsets
 	// and direction of text.
 	p.AllowAttrs("dir").Matching(Direction).Globally()
@@ -81,7 +110,7 @@ func (p *policy) AllowStandardAttributes() {
 
 // AllowImages enables the img element and some popular attributes. It will also
 // ensure that URL values are parseable
-func (p *policy) AllowImages() {
+func (p *Policy) AllowImages() {
 
 	// "img" is permitted
 	p.AllowAttrs("align").Matching(Align).OnElements("img")
@@ -96,7 +125,7 @@ func (p *policy) AllowImages() {
 
 // AllowLists will enabled ordered and unordered lists, as well as definition
 // lists
-func (p *policy) AllowLists() {
+func (p *Policy) AllowLists() {
 	// "ol" "ul" are permitted
 	p.AllowAttrs("type").Matching(ListType).OnElements("ol", "ul")
 
@@ -110,7 +139,7 @@ func (p *policy) AllowLists() {
 
 // AllowTables will enable a rich set of elements and attributes to describe
 // HTML tables
-func (p *policy) AllowTables() {
+func (p *Policy) AllowTables() {
 
 	// "table" is permitted
 	p.AllowAttrs("height", "width").Matching(NumberOrPercent).OnElements("table")

@@ -1,3 +1,32 @@
+// Copyright (c) 2014, David Kitchen <david@buro9.com>
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// * Neither the name of the organisation (Microcosm) nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package bluemonday
 
 import (
@@ -5,9 +34,9 @@ import (
 	"strings"
 )
 
-// policy encapsulates the whitelist of HTML elements and attributes that will
+// Policy encapsulates the whitelist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
-type policy struct {
+type Policy struct {
 
 	// Allows the <!DOCTYPE > tag to exist in the sanitized document
 	allowDocType bool
@@ -42,18 +71,19 @@ type attrPolicy struct {
 }
 
 type attrPolicyBuilder struct {
-	p *policy
+	p *Policy
 
 	attrNames []string
 	regexp    *regexp.Regexp
 }
 
 // NewPolicy returns a blank policy with nothing whitelisted or permitted. This
-// is the building block for a policy and you should now use AllowAttrs() and/or
-// AllowElements() to construct the whitelist of HTML elements and attributes.
-func NewPolicy() *policy {
+// is the recommended way to start building a policy and you should now use
+// AllowAttrs() and/or AllowElements() to construct the whitelist of HTML
+// elements and attributes.
+func NewPolicy() *Policy {
 
-	p := policy{}
+	p := Policy{}
 
 	p.urlSchemes = make(map[string]bool)
 	p.elsAndAttrs = make(map[string]map[string]attrPolicy)
@@ -78,7 +108,7 @@ func NewPolicy() *policy {
 //
 // The attribute policy is only added to the core policy when either Globally()
 // or OnElements(...) are called.
-func (p *policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
+func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 
 	abp := attrPolicyBuilder{p: p}
 
@@ -101,7 +131,7 @@ func (abp *attrPolicyBuilder) Matching(regex *regexp.Regexp) *attrPolicyBuilder 
 
 // OnElements will bind an attribute policy to a given range of HTML elements
 // and return the updated policy
-func (abp *attrPolicyBuilder) OnElements(elements ...string) *policy {
+func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 
 	for _, element := range elements {
 		element = strings.ToLower(element)
@@ -126,7 +156,7 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *policy {
 
 // Globally will bind an attribute policy to all HTML elements and return the
 // updated policy
-func (abp *attrPolicyBuilder) Globally() *policy {
+func (abp *attrPolicyBuilder) Globally() *Policy {
 
 	for _, attr := range abp.attrNames {
 		if _, ok := abp.p.globalAttrs[attr]; !ok {
@@ -147,7 +177,7 @@ func (abp *attrPolicyBuilder) Globally() *policy {
 // AllowElements will append HTML elements to the whitelist without applying an
 // attribute policy to those elements (the elements are permitted
 // sans-attributes)
-func (p *policy) AllowElements(names ...string) *policy {
+func (p *Policy) AllowElements(names ...string) *Policy {
 
 	for _, element := range names {
 		element = strings.ToLower(element)
@@ -162,7 +192,7 @@ func (p *policy) AllowElements(names ...string) *policy {
 
 // RequireNoFollowOnLinks will result in all <a> tags having a rel="nofollow"
 // added to them if one does not already exist
-func (p *policy) RequireNoFollowOnLinks(require bool) *policy {
+func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
 	p.requireNoFollow = require
 
 	return p
@@ -177,7 +207,7 @@ func (p *policy) RequireNoFollowOnLinks(require bool) *policy {
 // - img.src
 // - link.href
 // - script.src
-func (p *policy) RequireParseableURLs(require bool) *policy {
+func (p *Policy) RequireParseableURLs(require bool) *Policy {
 
 	p.requireParseableURLs = require
 
@@ -187,7 +217,7 @@ func (p *policy) RequireParseableURLs(require bool) *policy {
 // AllowRelativeURLs enables RequireParseableURLs and then permits URLs that
 // are parseable, have no schema information and url.IsAbs() returns false
 // This permits local URLs
-func (p *policy) AllowRelativeURLs(require bool) *policy {
+func (p *Policy) AllowRelativeURLs(require bool) *Policy {
 
 	p.RequireParseableURLs(true)
 	p.allowRelativeURLs = require
@@ -197,7 +227,7 @@ func (p *policy) AllowRelativeURLs(require bool) *policy {
 
 // AllowURLSchemes will append URL schems to the whitelist
 // Example: p.AllowURLSchemes("mailto", "http", "https")
-func (p *policy) AllowURLSchemes(schemes ...string) *policy {
+func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 
 	p.RequireParseableURLs(true)
 
@@ -220,7 +250,7 @@ func (p *policy) AllowURLSchemes(schemes ...string) *policy {
 // (default) or not.
 //
 // If you are sanitizing a HTML fragment the default (false) is fine.
-func (p *policy) AllowDocType(allow bool) *policy {
+func (p *Policy) AllowDocType(allow bool) *Policy {
 
 	p.allowDocType = allow
 
@@ -231,7 +261,7 @@ func (p *policy) AllowDocType(allow bool) *policy {
 // without any attributes to an internal map.
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
 // is mandatory
-func (p *policy) addDefaultElsWithoutAttrs() {
+func (p *Policy) addDefaultElsWithoutAttrs() {
 
 	p.elsWithoutAttrs["abbr"] = true
 	p.elsWithoutAttrs["acronym"] = true

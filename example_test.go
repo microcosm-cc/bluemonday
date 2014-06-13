@@ -1,0 +1,163 @@
+// Copyright (c) 2014, David Kitchen <david@buro9.com>
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// * Neither the name of the organisation (Microcosm) nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+package bluemonday_test
+
+import (
+	"fmt"
+	"regexp"
+
+	"github.com/microcosm-cc/bluemonday"
+)
+
+func Example() {
+	// Create a new policy
+	p := bluemonday.NewPolicy()
+
+	// Add elements to a policy without attributes
+	p.AllowElements("b", "strong")
+
+	// Add elements as a virtue of adding an attribute
+	p.AllowAttrs("nowrap").OnElements("td", "th")
+
+	// Attributes can either be added to all elements
+	p.AllowAttrs("dir").Globally()
+
+	//Or attributes can be added to specific elements
+	p.AllowAttrs("value").OnElements("li")
+
+	// It is ALWAYS recommended that an attribute be made to match a pattern
+	// XSS in HTML attributes is a very easy attack vector
+
+	// \p{L} matches unicode letters, \p{N} matches unicode numbers
+	p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()
+
+	// You can stop at any time and call .Sanitize()
+
+	// Assumes that string htmlIn was passed in from a HTTP POST and contains
+	// untrusted user generated content
+	htmlIn := `untrusted user generated content <body onload="alert('XSS')">`
+	fmt.Println(p.Sanitize(htmlIn))
+
+	// And you can take any existing policy and extend it
+	p = bluemonday.UGCPolicy()
+	p.AllowElements("fieldset", "select", "option")
+
+	// Links are complex beasts and one of the biggest attack vectors for
+	// malicious content so we have included features specifically to help here.
+
+	// This is not recommended:
+	p = bluemonday.NewPolicy()
+	p.AllowAttrs("href").Matching(regexp.MustCompile(`(?i)mailto|https?`)).OnElements("a")
+
+	// The regexp is insufficient in this case to have prevented a malformed
+	// value doing something unexpected.
+
+	// This will ensure that URLs are not considered invalid by Go's net/url
+	// package.
+	p.RequireParseableURLs(true)
+
+	// If you have enabled parseable URLs then the following option will allow
+	// relative URLs. By default this is disabled and will prevent all local and
+	// schema relative URLs (i.e. `href="//www.google.com"` is schema relative).
+	p.AllowRelativeURLs(true)
+
+	// If you have enabled parseable URLs then you can whitelist the schemas
+	// that are permitted. Bear in mind that allowing relative URLs in the above
+	// option allows for blank schemas.
+	p.AllowURLSchemes("mailto", "http", "https")
+
+	// Regardless of whether you have enabled parseable URLs, you can force all
+	// URLs to have a rel="nofollow" attribute. This will be added if it does
+	// not exist.
+
+	// This applies to "a" "area" "link" elements that have a "href" attribute
+	p.RequireNoFollowOnLinks(true)
+
+	// We provide a convenience function that applies all of the above, but you
+	// will still need to whitelist the linkable elements:
+	p = bluemonday.NewPolicy()
+	p.AllowStandardURLs()
+	p.AllowAttrs("cite").OnElements("blockquote")
+	p.AllowAttrs("href").OnElements("a", "area")
+	p.AllowAttrs("src").OnElements("img")
+
+	// Policy Building Helpers
+
+	// If you've got this far and you're bored already, we also bundle some
+	// other convenience functions
+	p = bluemonday.NewPolicy()
+	p.AllowStandardAttributes()
+	p.AllowImages()
+	p.AllowLists()
+	p.AllowTables()
+}
+
+func ExampleNewPolicy() {
+	p := bluemonday.NewPolicy()
+
+	// We ensure any URLs are parseable and have rel="nofollow" where applicable
+	p.AllowStandardURLs()
+
+	// We only allow <p> and <a href="">
+	p.AllowAttrs("href").OnElements("a")
+	p.AllowElements("p")
+
+	html := p.Sanitize(
+		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
+	)
+
+	// Should print:
+	// <a href="http://www.google.com" rel="nofollow">Google</a>
+	fmt.Println(html)
+}
+
+func ExampleStrictPolicy() {
+	p := bluemonday.StrictPolicy()
+
+	html := p.Sanitize(
+		`Goodbye <a onblur="alert(secret)" href="http://en.wikipedia.org/wiki/Goodbye_Cruel_World_(Pink_Floyd_song)">Cruel</a> World`,
+	)
+
+	// Should print:
+	// Hello  World
+	fmt.Println(html)
+}
+
+func ExampleUGCPolicy() {
+	p := bluemonday.UGCPolicy()
+
+	html := p.Sanitize(
+		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
+	)
+
+	// Should print:
+	// <a href="http://www.google.com" rel="nofollow">Google</a>
+	fmt.Println(html)
+}
