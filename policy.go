@@ -36,7 +36,15 @@ import (
 
 // Policy encapsulates the whitelist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
+//
+// You should use bluemonday.NewPolicy() to create a blank policy as the
+// unexported fields contain maps that need to be initialized.
 type Policy struct {
+
+	// Declares whether the maps have been initialized, used as a cheap check to
+	// ensure that those using Policy{} directly won't cause nil pointer
+	// exceptions
+	initialized bool
 
 	// Allows the <!DOCTYPE > tag to exist in the sanitized document
 	allowDocType bool
@@ -77,6 +85,17 @@ type attrPolicyBuilder struct {
 	regexp    *regexp.Regexp
 }
 
+// init initializes the maps if this has not been done already
+func (p *Policy) init() {
+	if !p.initialized {
+		p.urlSchemes = make(map[string]bool)
+		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
+		p.globalAttrs = make(map[string]attrPolicy)
+		p.elsWithoutAttrs = make(map[string]bool)
+		p.initialized = true
+	}
+}
+
 // NewPolicy returns a blank policy with nothing whitelisted or permitted. This
 // is the recommended way to start building a policy and you should now use
 // AllowAttrs() and/or AllowElements() to construct the whitelist of HTML
@@ -84,11 +103,6 @@ type attrPolicyBuilder struct {
 func NewPolicy() *Policy {
 
 	p := Policy{}
-
-	p.urlSchemes = make(map[string]bool)
-	p.elsAndAttrs = make(map[string]map[string]attrPolicy)
-	p.globalAttrs = make(map[string]attrPolicy)
-	p.elsWithoutAttrs = make(map[string]bool)
 
 	p.addDefaultElsWithoutAttrs()
 
@@ -109,6 +123,8 @@ func NewPolicy() *Policy {
 // The attribute policy is only added to the core policy when either Globally()
 // or OnElements(...) are called.
 func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
+
+	p.init()
 
 	abp := attrPolicyBuilder{p: p}
 
@@ -178,6 +194,7 @@ func (abp *attrPolicyBuilder) Globally() *Policy {
 // attribute policy to those elements (the elements are permitted
 // sans-attributes)
 func (p *Policy) AllowElements(names ...string) *Policy {
+	p.init()
 
 	for _, element := range names {
 		element = strings.ToLower(element)
@@ -193,6 +210,7 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 // RequireNoFollowOnLinks will result in all <a> tags having a rel="nofollow"
 // added to them if one does not already exist
 func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
+
 	p.requireNoFollow = require
 
 	return p
@@ -228,6 +246,7 @@ func (p *Policy) AllowRelativeURLs(require bool) *Policy {
 // AllowURLSchemes will append URL schems to the whitelist
 // Example: p.AllowURLSchemes("mailto", "http", "https")
 func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
+	p.init()
 
 	p.RequireParseableURLs(true)
 
@@ -262,6 +281,7 @@ func (p *Policy) AllowDocType(allow bool) *Policy {
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
 // is mandatory
 func (p *Policy) addDefaultElsWithoutAttrs() {
+	p.init()
 
 	p.elsWithoutAttrs["abbr"] = true
 	p.elsWithoutAttrs["acronym"] = true

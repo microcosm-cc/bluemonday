@@ -49,6 +49,14 @@ func (p *Policy) Sanitize(s string) string {
 		return ""
 	}
 
+	// It is possible that the developer has created the policy via:
+	//   p := bluemonday.Policy{}
+	// rather than:
+	//   p := bluemonday.NewPolicy()
+	// If this is the case, and if they haven't yet triggered an action that
+	// would initiliaze the maps, then we need to do that.
+	p.init()
+
 	var cleanHTML bytes.Buffer
 	tokenizer := html.NewTokenizer(strings.NewReader(s))
 
