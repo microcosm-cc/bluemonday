@@ -120,26 +120,33 @@ func Example() {
 }
 
 func ExampleNewPolicy() {
+	// NewPolicy is a blank policy and we need to explicitly whitelist anything
+	// that we wish to allow through
 	p := bluemonday.NewPolicy()
 
 	// We ensure any URLs are parseable and have rel="nofollow" where applicable
 	p.AllowStandardURLs()
 
-	// We only allow <p> and <a href="">
+	// AllowStandardURLs already ensures that the href will be valid, and so we
+	// can skip the .Matching()
 	p.AllowAttrs("href").OnElements("a")
+
+	// We allow paragraphs too
 	p.AllowElements("p")
 
 	html := p.Sanitize(
-		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
+		`<p><a onblur="alert(secret)" href="http://www.google.com">Google</a></p>`,
 	)
 
 	fmt.Println(html)
 
 	// Output:
-	//<a href="http://www.google.com" rel="nofollow">Google</a>
+	//<p><a href="http://www.google.com" rel="nofollow">Google</a></p>
 }
 
 func ExampleStrictPolicy() {
+	// StrictPolicy is equivalent to NewPolicy and as nothing else is declared
+	// we are stripping all elements (and their attributes)
 	p := bluemonday.StrictPolicy()
 
 	html := p.Sanitize(
@@ -153,6 +160,7 @@ func ExampleStrictPolicy() {
 }
 
 func ExampleUGCPolicy() {
+	// UGCPolicy is a convenience policy for user generated content.
 	p := bluemonday.UGCPolicy()
 
 	html := p.Sanitize(
@@ -163,4 +171,28 @@ func ExampleUGCPolicy() {
 
 	// Output:
 	//<a href="http://www.google.com" rel="nofollow">Google</a>
+}
+
+func ExamplePolicy_AllowAttrs() {
+	p := bluemonday.NewPolicy()
+
+	// Allow the 'title' attribute on every HTML element that has been
+	// whitelisted
+	p.AllowAttrs("title").Matching(bluemonday.Paragraph).Globally()
+
+	// Allow the 'abbr' attribute on only the 'td' and 'th' elements.
+	p.AllowAttrs("abbr").Matching(bluemonday.Paragraph).OnElements("td", "th")
+
+	// Allow the 'colspan' and 'rowspan' attributes, matching a positive integer
+	// pattern, on only the 'td' and 'th' elements.
+	p.AllowAttrs("colspan", "rowspan").Matching(
+		bluemonday.Integer,
+	).OnElements("td", "th")
+}
+
+func ExamplePolicy_AllowElements() {
+	p := bluemonday.NewPolicy()
+
+	// Allow styling elements without attributes
+	p.AllowElements("br", "div", "hr", "p", "span")
 }

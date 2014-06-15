@@ -36,15 +36,32 @@ import (
 // A selection of regular expressions that can be used as .Matching() rules on
 // HTML attributes.
 var (
-	Align     = regexp.MustCompile(`(?i)center|left|right|justify|char`)
-	Valign    = regexp.MustCompile(`(?i)baseline|bottom|middle|top`)
-	Direction = regexp.MustCompile(`(?i)auto|rtl|ltr`)
-	Integer   = regexp.MustCompile(`[0-9]+`)
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-align
+	CellAlign = regexp.MustCompile(`(?i)center|justify|left|right|char`)
+
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-valign
+	CellVerticalAlign = regexp.MustCompile(`(?i)baseline|bottom|middle|top`)
+
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/bdo#attr-dir
+	Direction = regexp.MustCompile(`(?i)rtl|ltr`)
+
+	// http://www.w3.org/MarkUp/Test/Img/imgtest.html
+	ImageAlign = regexp.MustCompile(
+		`(?i)left|right|top|texttop|middle|absmiddle|baseline|bottom|absbottom`,
+	)
+
+	// Whole positive integer (including 0) used in places like td.colspan
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-colspan
+	Integer = regexp.MustCompile(`[0-9]+`)
 
 	// ISO8601 looks scary but isn't, it's taken from here:
 	// http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
+	//
 	// Minor changes have been made to remove PERL specific syntax that requires
 	// regexp backtracking which are not supported in Go
+	//
+	// Used in places like time.datetime
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#attr-datetime
 	ISO8601 = regexp.MustCompile(
 		`^([\+-]?\d{4})((-?)((0[1-9]|1[0-2])` +
 			`([12]\d|0[1-9]|3[01])?|W([0-4]\d|5[0-2])` +
@@ -53,12 +70,31 @@ var (
 			`([0-5]\d([\.,]\d+)?)?([zZ]|([\+-])` +
 			`([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$`,
 	)
-	ListType        = regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`)
-	Name            = regexp.MustCompile(`[a-zA-Z0-9\-_\$]+`)
-	NamesAndSpaces  = regexp.MustCompile(`[a-zA-Z0-9\-_\$]+`)
-	Number          = regexp.MustCompile(`[+-]?(?:(?:[0-9]+(?:\.[0-9]*)?)|\.[0-9]+)`)
+
+	// List types, encapsulates the common value as well as the latest spec
+	// values
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/ol#attr-type
+	ListType = regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`)
+
+	// Textual names/labels separated by spaces, used in places like a.rel and
+	// the common attribute 'class'
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attr-rel
+	NamesAndSpaces = regexp.MustCompile(`[a-zA-Z0-9\-_\$]+`)
+
+	// Double value used on HTML5 meter and progress elements
+	// http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html#the-meter-element
+	Number = regexp.MustCompile(`^[-+]?[0-9]*\.?[0-9]+$`)
+
+	// Whole numbers or %. Used predominantly as units of measurement in width
+	// and height attributes
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img#attr-height
 	NumberOrPercent = regexp.MustCompile(`[0-9]+%?`)
-	Paragraph       = regexp.MustCompile(`(?:[\p{L}\p{N},'\.\s\-_\(\)]|&[0-9]{2};)*`)
+
+	// Any block of text in an attribute such as *.'title', img.alt, etc
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes#attr-title
+	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
+	// Note that we are not allowing chars that could close tags like '>'
+	Paragraph = regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)
 )
 
 // AllowStandardURLs is a convenience function that will enable rel="nofollow"
@@ -100,12 +136,7 @@ func (p *Policy) AllowStandardAttributes() {
 	).Globally()
 
 	// "title" is permitted as it improves accessibility.
-	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
-	p.AllowAttrs(
-		"title",
-	).Matching(
-		regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`),
-	).Globally()
+	p.AllowAttrs("title").Matching(Paragraph).Globally()
 }
 
 // AllowImages enables the img element and some popular attributes. It will also
@@ -113,7 +144,7 @@ func (p *Policy) AllowStandardAttributes() {
 func (p *Policy) AllowImages() {
 
 	// "img" is permitted
-	p.AllowAttrs("align").Matching(Align).OnElements("img")
+	p.AllowAttrs("align").Matching(ImageAlign).OnElements("img")
 	p.AllowAttrs("alt").Matching(Paragraph).OnElements("img")
 	p.AllowAttrs("height", "width").Matching(NumberOrPercent).OnElements("img")
 
@@ -149,22 +180,24 @@ func (p *Policy) AllowTables() {
 	p.AllowElements("caption")
 
 	// "col" "colgroup" are permitted
-	p.AllowAttrs("align").Matching(Align).OnElements("col", "colgroup")
+	p.AllowAttrs("align").Matching(CellAlign).OnElements("col", "colgroup")
 	p.AllowAttrs("height", "width").Matching(
 		NumberOrPercent,
 	).OnElements("col", "colgroup")
-	p.AllowAttrs("span").Matching(NumberOrPercent).OnElements("colgroup", "col")
-	p.AllowAttrs("valign").Matching(Valign).OnElements("col", "colgroup")
+	p.AllowAttrs("span").Matching(Integer).OnElements("colgroup", "col")
+	p.AllowAttrs("valign").Matching(
+		CellVerticalAlign,
+	).OnElements("col", "colgroup")
 
 	// "thead" "tr" are permitted
-	p.AllowAttrs("align").Matching(Align).OnElements("thead", "tr")
-	p.AllowAttrs("valign").Matching(Valign).OnElements("thead", "tr")
+	p.AllowAttrs("align").Matching(CellAlign).OnElements("thead", "tr")
+	p.AllowAttrs("valign").Matching(CellVerticalAlign).OnElements("thead", "tr")
 
 	// "td" "th" are permitted
 	p.AllowAttrs("abbr").Matching(Paragraph).OnElements("td", "th")
-	p.AllowAttrs("align").Matching(Align).OnElements("td", "th")
-	p.AllowAttrs("colspan", "rowspan").Matching(Number).OnElements("td", "th")
-	p.AllowAttrs("headers").Matching(Name).OnElements("td", "th")
+	p.AllowAttrs("align").Matching(CellAlign).OnElements("td", "th")
+	p.AllowAttrs("colspan", "rowspan").Matching(Integer).OnElements("td", "th")
+	p.AllowAttrs("headers").Matching(NamesAndSpaces).OnElements("td", "th")
 	p.AllowAttrs("height", "width").Matching(
 		NumberOrPercent,
 	).OnElements("td", "th")
@@ -173,12 +206,14 @@ func (p *Policy) AllowTables() {
 	).Matching(
 		regexp.MustCompile(`(?i)(?:row|col)(?:group)?`),
 	).OnElements("td", "th")
-	p.AllowAttrs("valign").Matching(Valign).OnElements("td", "th")
+	p.AllowAttrs("valign").Matching(CellVerticalAlign).OnElements("td", "th")
 	p.AllowAttrs("nowrap").Matching(
 		regexp.MustCompile(`(?i)|nowrap`),
 	).OnElements("td", "th")
 
 	// "tbody" "tfoot"
-	p.AllowAttrs("align").Matching(Align).OnElements("tbody", "tfoot")
-	p.AllowAttrs("valign").Matching(Valign).OnElements("tbody", "tfoot")
+	p.AllowAttrs("align").Matching(CellAlign).OnElements("tbody", "tfoot")
+	p.AllowAttrs("valign").Matching(
+		CellVerticalAlign,
+	).OnElements("tbody", "tfoot")
 }

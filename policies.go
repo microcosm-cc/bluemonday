@@ -126,7 +126,7 @@ func UGCPolicy() *Policy {
 	// a standard URL.
 	p.AllowAttrs("cite").OnElements("blockquote")
 
-	// "br" "div" "hr" "p" "span" "wbr" are permitted and takes no attributes
+	// "br" "div" "hr" "p" "span" "wbr" are permitted and take no attributes
 	p.AllowElements("br", "div", "hr", "p", "span", "wbr")
 
 	///////////

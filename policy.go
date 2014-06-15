@@ -113,13 +113,6 @@ func NewPolicy() *Policy {
 // attribute policy builder that allows you to specify the pattern and scope of
 // the whitelisted attribute.
 //
-// Examples:
-//   AllowAttrs("title").Globally()
-//   AllowAttrs("abbr").OnElements("td", "th")
-//   AllowAttrs("colspan", "rowspan").Matching(
-//           regexp.MustCompile("[0-9]+"),
-//       ).OnElements("td", "th")
-//
 // The attribute policy is only added to the core policy when either Globally()
 // or OnElements(...) are called.
 func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
