@@ -36,21 +36,26 @@ import (
 // A selection of regular expressions that can be used as .Matching() rules on
 // HTML attributes.
 var (
+	// CellAlign handles the `align` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-align
 	CellAlign = regexp.MustCompile(`(?i)center|justify|left|right|char`)
 
+	// CellVerticalAlign handles the `valign` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-valign
 	CellVerticalAlign = regexp.MustCompile(`(?i)baseline|bottom|middle|top`)
 
+	// Direction handles the `dir` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/bdo#attr-dir
 	Direction = regexp.MustCompile(`(?i)rtl|ltr`)
 
+	// ImageAlign handles the `align` attribute on the `image` tag
 	// http://www.w3.org/MarkUp/Test/Img/imgtest.html
 	ImageAlign = regexp.MustCompile(
 		`(?i)left|right|top|texttop|middle|absmiddle|baseline|bottom|absbottom`,
 	)
 
-	// Whole positive integer (including 0) used in places like td.colspan
+	// Integer describes whole positive integers (including 0) used in places
+	// like td.colspan
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-colspan
 	Integer = regexp.MustCompile(`[0-9]+`)
 
@@ -71,26 +76,26 @@ var (
 			`([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$`,
 	)
 
-	// List types, encapsulates the common value as well as the latest spec
-	// values
+	// ListType encapsulates the common value as well as the latest spec
+	// values for lists
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/ol#attr-type
 	ListType = regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`)
 
-	// Textual names/labels separated by spaces, used in places like a.rel and
-	// the common attribute 'class'
+	// NamesAndSpaces is used in places like `a.rel` and the common attribute
+	// `class` which both contain space delimited lists of ASCII words
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attr-rel
 	NamesAndSpaces = regexp.MustCompile(`[a-zA-Z0-9\-_\$]+`)
 
-	// Double value used on HTML5 meter and progress elements
+	// Number is a double value used on HTML5 meter and progress elements
 	// http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html#the-meter-element
 	Number = regexp.MustCompile(`^[-+]?[0-9]*\.?[0-9]+$`)
 
-	// Whole numbers or %. Used predominantly as units of measurement in width
+	// NumberOrPercent is used predominantly as units of measurement in width
 	// and height attributes
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img#attr-height
 	NumberOrPercent = regexp.MustCompile(`[0-9]+%?`)
 
-	// Any block of text in an attribute such as *.'title', img.alt, etc
+	// Paragraph of text in an attribute such as *.'title', img.alt, etc
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes#attr-title
 	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
 	// Note that we are not allowing chars that could close tags like '>'
