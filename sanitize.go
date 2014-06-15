@@ -191,6 +191,7 @@ func (p *Policy) sanitizeAttrs(
 		// - area.href
 		// - link.href
 		// - blockquote.cite
+		// - q.cite
 		// - img.src
 		// - script.src
 		tmpAttrs := []html.Attribute{}
@@ -205,7 +206,7 @@ func (p *Policy) sanitizeAttrs(
 					break
 				}
 				tmpAttrs = append(tmpAttrs, htmlAttr)
-			case "blockquote":
+			case "blockquote", "q":
 				if htmlAttr.Key == "cite" {
 					if u, ok := p.validURL(htmlAttr.Val); ok {
 						htmlAttr.Val = u

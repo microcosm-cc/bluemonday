@@ -157,8 +157,8 @@ func UGCPolicy() *Policy {
 	p.AllowElements("abbr", "acronym", "cite", "code", "dfn", "em",
 		"figcaption", "mark", "s", "samp", "strong", "sub", "sup", "var")
 
-	// "q" is permitted
-	p.AllowAttrs("cite").Matching(Paragraph).OnElements("q")
+	// "q" is permitted and "cite" is a URL and handled by URL policies
+	p.AllowAttrs("cite").OnElements("q")
 
 	// "time" is permitted
 	p.AllowAttrs("datetime").Matching(ISO8601).OnElements("time")
