@@ -81,10 +81,11 @@ var (
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/ol#attr-type
 	ListType = regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`)
 
-	// NamesAndSpaces is used in places like `a.rel` and the common attribute
-	// `class` which both contain space delimited lists of ASCII words
-	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#attr-rel
-	NamesAndSpaces = regexp.MustCompile(`[a-zA-Z0-9\-_\$]+`)
+	// SpaceSeparatedTokens is used in places like `a.rel` and the common attribute
+	// `class` which both contain space delimited lists of data tokens
+	// http://www.w3.org/TR/html-markup/datatypes.html#common.data.tokens-def
+	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
+	SpaceSeparatedTokens = regexp.MustCompile(`[\s\p{L}\p{N}_-]+`)
 
 	// Number is a double value used on HTML5 meter and progress elements
 	// http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html#the-meter-element
@@ -97,7 +98,6 @@ var (
 
 	// Paragraph of text in an attribute such as *.'title', img.alt, etc
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes#attr-title
-	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
 	// Note that we are not allowing chars that could close tags like '>'
 	Paragraph = regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)
 )
@@ -142,6 +142,16 @@ func (p *Policy) AllowStandardAttributes() {
 
 	// "title" is permitted as it improves accessibility.
 	p.AllowAttrs("title").Matching(Paragraph).Globally()
+}
+
+// AllowStyling presently enables the class attribute globally.
+//
+// Note: When bluemonday ships a CSS parser and we can safely sanitise that,
+// this will also allow sanitized styling of elements via the style attribute.
+func (p *Policy) AllowStyling() {
+
+	// "class" is permitted globally
+	p.AllowAttrs("class").Matching(SpaceSeparatedTokens).Globally()
 }
 
 // AllowImages enables the img element and some popular attributes. It will also
@@ -202,7 +212,9 @@ func (p *Policy) AllowTables() {
 	p.AllowAttrs("abbr").Matching(Paragraph).OnElements("td", "th")
 	p.AllowAttrs("align").Matching(CellAlign).OnElements("td", "th")
 	p.AllowAttrs("colspan", "rowspan").Matching(Integer).OnElements("td", "th")
-	p.AllowAttrs("headers").Matching(NamesAndSpaces).OnElements("td", "th")
+	p.AllowAttrs("headers").Matching(
+		SpaceSeparatedTokens,
+	).OnElements("td", "th")
 	p.AllowAttrs("height", "width").Matching(
 		NumberOrPercent,
 	).OnElements("td", "th")

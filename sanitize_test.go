@@ -170,6 +170,48 @@ func TestLinks(t *testing.T) {
 	wg.Wait()
 }
 
+func TestStyling(t *testing.T) {
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		test{
+			in:       `<span class="foo">Hello World</span>`,
+			expected: `<span class="foo">Hello World</span>`,
+		},
+		test{
+			in:       `<span class="foo bar654">Hello World</span>`,
+			expected: `<span class="foo bar654">Hello World</span>`,
+		},
+	}
+
+	p := UGCPolicy()
+	p.AllowStyling()
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
 func TestUGCPolicy(t *testing.T) {
 
 	type test struct {

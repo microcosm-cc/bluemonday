@@ -142,7 +142,7 @@ func UGCPolicy() *Policy {
 		regexp.MustCompile(`([0-9]+,){2}(,[0-9]+)*`),
 	).OnElements("area")
 	p.AllowAttrs("href").OnElements("area")
-	p.AllowAttrs("rel").Matching(NamesAndSpaces).OnElements("area")
+	p.AllowAttrs("rel").Matching(SpaceSeparatedTokens).OnElements("area")
 	p.AllowAttrs("shape").Matching(
 		regexp.MustCompile(`(?i)|default|circle|rect|poly`),
 	).OnElements("area")
