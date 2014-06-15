@@ -133,9 +133,10 @@ func ExampleNewPolicy() {
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
 
-	// Should print:
-	// <a href="http://www.google.com" rel="nofollow">Google</a>
 	fmt.Println(html)
+
+	// Output:
+	//<a href="http://www.google.com" rel="nofollow">Google</a>
 }
 
 func ExampleStrictPolicy() {
@@ -145,9 +146,10 @@ func ExampleStrictPolicy() {
 		`Goodbye <a onblur="alert(secret)" href="http://en.wikipedia.org/wiki/Goodbye_Cruel_World_(Pink_Floyd_song)">Cruel</a> World`,
 	)
 
-	// Should print:
-	// Hello  World
 	fmt.Println(html)
+
+	// Output:
+	//Goodbye  World
 }
 
 func ExampleUGCPolicy() {
@@ -157,7 +159,8 @@ func ExampleUGCPolicy() {
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
 
-	// Should print:
-	// <a href="http://www.google.com" rel="nofollow">Google</a>
 	fmt.Println(html)
+
+	// Output:
+	//<a href="http://www.google.com" rel="nofollow">Google</a>
 }
