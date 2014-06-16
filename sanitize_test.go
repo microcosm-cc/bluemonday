@@ -1141,3 +1141,49 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 	}
 	wg.Wait()
 }
+
+func TestIssue3(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/3
+
+	p := UGCPolicy()
+	p.AllowStyling()
+
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		test{
+			in:       `Hello <span class="foo bar bash">there</span> world.`,
+			expected: `Hello <span class="foo bar bash">there</span> world.`,
+		},
+		test{
+			in:       `Hello <span class="javascript:alert(123)">there</span> world.`,
+			expected: `Hello <span>there</span> world.`,
+		},
+		test{
+			in:       `Hello <span class="><script src='"'http://hackers.org/XSS.js'"'></script>">there</span> world.`,
+			expected: `Hello <span>&#34;&gt;there</span> world.`,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

@@ -38,68 +38,76 @@ import (
 var (
 	// CellAlign handles the `align` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-align
-	CellAlign = regexp.MustCompile(`(?i)center|justify|left|right|char`)
+	CellAlign = regexp.MustCompile(`(?i)^(center|justify|left|right|char)$`)
 
 	// CellVerticalAlign handles the `valign` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-valign
-	CellVerticalAlign = regexp.MustCompile(`(?i)baseline|bottom|middle|top`)
+	CellVerticalAlign = regexp.MustCompile(`(?i)^(baseline|bottom|middle|top)$`)
 
 	// Direction handles the `dir` attribute
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/bdo#attr-dir
-	Direction = regexp.MustCompile(`(?i)rtl|ltr`)
+	Direction = regexp.MustCompile(`(?i)^(rtl|ltr)$`)
 
 	// ImageAlign handles the `align` attribute on the `image` tag
 	// http://www.w3.org/MarkUp/Test/Img/imgtest.html
 	ImageAlign = regexp.MustCompile(
-		`(?i)left|right|top|texttop|middle|absmiddle|baseline|bottom|absbottom`,
+		`(?i)^(left|right|top|texttop|middle|absmiddle|baseline|bottom|absbottom)$`,
 	)
 
 	// Integer describes whole positive integers (including 0) used in places
 	// like td.colspan
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/td#attr-colspan
-	Integer = regexp.MustCompile(`[0-9]+`)
+	Integer = regexp.MustCompile(`^[0-9]+$`)
 
-	// ISO8601 looks scary but isn't, it's taken from here:
-	// http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
-	//
-	// Minor changes have been made to remove PERL specific syntax that requires
-	// regexp backtracking which are not supported in Go
+	// ISO8601 according to the W3 group is only a subset of the ISO8601
+	// standard: http://www.w3.org/TR/NOTE-datetime
 	//
 	// Used in places like time.datetime
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#attr-datetime
+	//
+	// Matches patterns:
+	//  Year:
+	//     YYYY (eg 1997)
+	//  Year and month:
+	//     YYYY-MM (eg 1997-07)
+	//  Complete date:
+	//     YYYY-MM-DD (eg 1997-07-16)
+	//  Complete date plus hours and minutes:
+	//     YYYY-MM-DDThh:mmTZD (eg 1997-07-16T19:20+01:00)
+	//  Complete date plus hours, minutes and seconds:
+	//     YYYY-MM-DDThh:mm:ssTZD (eg 1997-07-16T19:20:30+01:00)
+	//  Complete date plus hours, minutes, seconds and a decimal fraction of a
+	//  second
+	//      YYYY-MM-DDThh:mm:ss.sTZD (eg 1997-07-16T19:20:30.45+01:00)
 	ISO8601 = regexp.MustCompile(
-		`^([\+-]?\d{4})((-?)((0[1-9]|1[0-2])` +
-			`([12]\d|0[1-9]|3[01])?|W([0-4]\d|5[0-2])` +
-			`(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))` +
-			`([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+[^:])?)?` +
-			`([0-5]\d([\.,]\d+)?)?([zZ]|([\+-])` +
-			`([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$`,
+		`^[0-9]{4}(-[0-9]{2}(-[0-9]{2}([ T][0-9]{2}(:[0-9]{2}){1,2}(.[0-9]{1,6})` +
+			`?Z?([\+-][0-9]{2}:[0-9]{2})?)?)?)?$`,
 	)
 
 	// ListType encapsulates the common value as well as the latest spec
 	// values for lists
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/ol#attr-type
-	ListType = regexp.MustCompile(`(?i)circle|disc|square|a|A|i|I|1`)
+	ListType = regexp.MustCompile(`(?i)^(circle|disc|square|a|A|i|I|1)$`)
 
 	// SpaceSeparatedTokens is used in places like `a.rel` and the common attribute
 	// `class` which both contain space delimited lists of data tokens
 	// http://www.w3.org/TR/html-markup/datatypes.html#common.data.tokens-def
 	// Regexp: \p{L} matches unicode letters, \p{N} matches unicode numbers
-	SpaceSeparatedTokens = regexp.MustCompile(`[\s\p{L}\p{N}_-]+`)
+	SpaceSeparatedTokens = regexp.MustCompile(`^([\s\p{L}\p{N}_-]+)$`)
 
 	// Number is a double value used on HTML5 meter and progress elements
 	// http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html#the-meter-element
-	Number = regexp.MustCompile(`^[-+]?[0-9]*\.?[0-9]+$`)
+	Number = regexp.MustCompile(`^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$`)
 
 	// NumberOrPercent is used predominantly as units of measurement in width
 	// and height attributes
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/img#attr-height
-	NumberOrPercent = regexp.MustCompile(`[0-9]+%?`)
+	NumberOrPercent = regexp.MustCompile(`^[0-9]+[%]?$`)
 
 	// Paragraph of text in an attribute such as *.'title', img.alt, etc
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes#attr-title
 	// Note that we are not allowing chars that could close tags like '>'
-	Paragraph = regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)
+	Paragraph = regexp.MustCompile(`^[\p{L}\p{N}\s\-_',\[\]!\./\\\(\)]*$`)
 )
 
 // AllowStandardURLs is a convenience function that will enable rel="nofollow"

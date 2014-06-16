@@ -86,7 +86,7 @@ func UGCPolicy() *Policy {
 	// be blank or the value "open".
 	p.AllowAttrs(
 		"open",
-	).Matching(regexp.MustCompile(`(?i)|open`)).OnElements("details")
+	).Matching(regexp.MustCompile(`(?i)^|open$`)).OnElements("details")
 
 	// "fieldset" is not permitted as we are not allowing forms to be created.
 
@@ -139,12 +139,12 @@ func UGCPolicy() *Policy {
 	// "area" is permitted along with the attributes that map image maps work
 	p.AllowAttrs("alt").Matching(Paragraph).OnElements("area")
 	p.AllowAttrs("coords").Matching(
-		regexp.MustCompile(`([0-9]+,){2}(,[0-9]+)*`),
+		regexp.MustCompile(`^([0-9]+,){2}(,[0-9]+)*$`),
 	).OnElements("area")
 	p.AllowAttrs("href").OnElements("area")
 	p.AllowAttrs("rel").Matching(SpaceSeparatedTokens).OnElements("area")
 	p.AllowAttrs("shape").Matching(
-		regexp.MustCompile(`(?i)|default|circle|rect|poly`),
+		regexp.MustCompile(`(?i)^default|circle|rect|poly$`),
 	).OnElements("area")
 
 	// "link" is not permitted
