@@ -1166,6 +1166,10 @@ func TestIssue3(t *testing.T) {
 			in:       `Hello <span class="><script src="http://hackers.org/XSS.js"></script>">there</span> world.`,
 			expected: `Hello <span>&#34;&gt;there</span> world.`,
 		},
+		test{
+			in:       `Hello <span class="><script src='http://hackers.org/XSS.js'></script>">there</span> world.`,
+			expected: `Hello <span>there</span> world.`,
+		},
 	}
 
 	wg := sync.WaitGroup{}
