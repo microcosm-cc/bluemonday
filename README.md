@@ -1,8 +1,10 @@
 # bluemonday [![Build Status](https://travis-ci.org/microcosm-cc/bluemonday.svg?branch=master)](https://travis-ci.org/microcosm-cc/bluemonday) [![GoDoc](https://godoc.org/github.com/microcosm-cc/bluemonday?status.png)](https://godoc.org/github.com/microcosm-cc/bluemonday)
 
-bluemonday is a HTML sanitizer implemented in Go.
+bluemonday is a whitelist based HTML sanitizer implemented in Go. It is fast and highly configurable.
 
-Feed it user generated content (UTF-8 strings and HTML) and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes. It is fast and highly configurable.
+Supply it user generated content and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes.
+
+If you accept user generated content and your server uses Go, you **need** bluemonday.
 
 The default `bluemonday.UGCPolicy().Sanitize()` turns this:
 
@@ -10,7 +12,7 @@ The default `bluemonday.UGCPolicy().Sanitize()` turns this:
 Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World
 ```
 
-Into the more harmless:
+Into a harmless:
 
 ```html
 Hello World
@@ -35,15 +37,13 @@ Whilst still allowing this:
 </a>
 ```
 
-To pass through mostly unaltered (it gained a rel="nofollow"):
+To pass through mostly unaltered (it gained a rel="nofollow" which is a good thing for user generated content):
 
 ```html
 <a href="http://www.google.com/" rel="nofollow">
   <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png"/>
 </a>
 ```
-
-The primary purpose of bluemonday is to take potentially unsafe user generated content (from things like Markdown, HTML WYSIWYG tools, etc) and make it safe for you to put on your website.
 
 It protects sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the safest thing to do is to sanitize user input against a known safe list of HTML elements and attributes.
 
@@ -53,13 +53,23 @@ If you use [blackfriday](https://github.com/russross/blackfriday) or [Pandoc](ht
 
 bluemonday is heavily inspired by both the [OWASP Java HTML Sanitizer](https://code.google.com/p/owasp-java-html-sanitizer/) and the [HTML Purifier](http://htmlpurifier.org/).
 
-## Is it production ready yet?
+## Technical Summary
 
-*Maybe*
+Whitelist based, you must either build a policy describing the HTML elements and attributes to permit (and the `regexp` patterns of attributes) or use one of the supplied policies representing good defaults.
 
-We are currently passing our tests (including AntiSamy tests). Please see [Issues](https://github.com/microcosm-cc/bluemonday/issues) for any current issues.
+The policy containing the whitelist is applied using a fast SAX-like tokenizer implemented in the [Go net/html library](https://code.google.com/p/go/source/browse/?repo=net#hg%2Fhtml) by the core Go team.
 
-Our tests may not be complete, we invite pull requests.
+We expect to be supplied by well-formatted HTML (closing elements for every applicable open element, nested correctly), and so we do not focus on repairing badly nested or incomplete HTML. We focus on simply ensuring that whatever elements do exist are described in the policy whitelist along with the attributes, and that links are safe. This means that [GIGO](http://en.wikipedia.org/wiki/Garbage_in,_garbage_out) does apply and if you feed it bad HTML bluemonday is not tasked with figuring out how to make it good again.
+
+## Is it production ready?
+
+*Yes*
+
+We are using bluemonday in production having migrated from the widely used and heavily field tested OWASP Java HTML Sanitizer.
+
+We passing our extensive test suite (including AntiSamy tests as well as tests for any issues raised). Check for any [unresolved issues](https://github.com/microcosm-cc/bluemonday/issues?page=1&state=open) to see whether anything may be a blocker for you.
+
+We invite pull requests and issues to help us ensure we are offering comprehensive protection against various attacks via user generated content.
 
 ## Usage
 
@@ -81,7 +91,7 @@ func main() {
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
 
-	// Should print:
+	// Output:
 	// <a href="http://www.google.com" rel="nofollow">Google</a>
 	fmt.Println(html)
 }
@@ -100,6 +110,10 @@ import (
 func main() {
 	p := bluemonday.NewPolicy()
 
+	// Require URLs to be parseable by net/url.Parse and either:
+	//   mailto: http:// or https://
+	p.AllowStandardURLs()
+	
 	// We only allow <p> and <a href="">
 	p.AllowAttrs("href").OnElements("a")
 	p.AllowElements("p")
@@ -108,23 +122,25 @@ func main() {
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
 	)
 
-	// Should print:
+	// Output:
 	// <a href="http://www.google.com">Google</a>
 	fmt.Println(html)
 }
 ```
 
-We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist.
+We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist. An example usage scenario would be blog post titles where HTML tags are not expected at all.
 
-The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc.
+The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
 
 ## Policy Building
 
 The essence of building a policy is to determine which HTML elements and attributes are considered safe for your scenario. OWASP provide an [XSS prevention cheat sheet](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet) to help explain the risks, but essentially:
 
-1. Avoid anything other than plain HTML elements
-1. Avoid `script`, `style`, `iframe`, `object`, `embed`, `base` elements
-1. Avoid anything other than plain HTML elements with simple values that you can match to a regexp
+1. Avoid anything other than the standard HTML elements
+1. Avoid `script`, `style`, `iframe`, `object`, `embed`, `base` elements that allow code to be executed by the client or third party content to be included that can execute code
+1. Avoid anything other than plain HTML attributes with values matched to a regexp
+
+Basically, you should be able to describe what HTML is fine for your scenario. If you do not have confidence that you can describe your policy please consider using one of the shipped policies such as `bluemonday.UGCPolicy()`.
 
 To create a new policy:
 
@@ -141,6 +157,7 @@ p.AllowElements("b", "strong")
 Or add elements as a virtue of adding an attribute:
 
 ```go
+// Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("nowrap").OnElements("td", "th")
 ```
 
@@ -153,6 +170,7 @@ p.AllowAttrs("dir").Matching(regexp.MustCompile("(?i)rtl|ltr")).Globally()
 Or attributes can be added to specific elements:
 
 ```go
+// Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("value").OnElements("li")
 ```
 
@@ -189,38 +207,38 @@ p.AllowAttrs("href").Matching(regexp.MustCompile(`(?i)mailto|https?`)).OnElement
 
 But that may not help you as the regexp is insufficient in this case to have prevented a malformed value doing something unexpected.
 
-We provide some additional global options for working with links.
+We provide some additional global options for safely working with links.
 
-This will ensure that URLs are not considered invalid by Go's `net/url` package.
+`RequireParseableURLs` will ensure that URLs are parseable by Go's `net/url` package.
 
 ```go
 p.RequireParseableURLs(true)
 ```
 
-If you have enabled parseable URLs then the following option will allow relative URLs. By default this is disabled and will prevent all local and schema relative URLs (i.e. `href="//www.google.com"` is schema relative).
+If you have enabled parseable URLs then the following option will `AllowRelativeURLs`. By default this is disabled (bluemonday is a whitelist tool... you need to explicitly tell us to permit things) and when disabled it will prevent all local and scheme relative URLs (i.e. `href="localpage.html"`, `href="../home.html"` and even `href="//www.google.com"` are relative).
 
 ```go
 p.AllowRelativeURLs(true)
 ```
 
-If you have enabled parseable URLs then you can whitelist the schemas that are permitted. Bear in mind that allowing relative URLs in the above option allows for blank schemas.
+If you have enabled parseable URLs then you can whitelist the schemes (commonly called protocol when thinking of `http` and `https`) that are permitted. Bear in mind that allowing relative URLs in the above option will allow for a blank scheme.
 
 ```go
 p.AllowURLSchemes("mailto", "http", "https")
 ```
 
-Regardless of whether you have enabled parseable URLs, you can force all URLs to have a rel="nofollow" attribute. This will be added if it does not exist.
+Regardless of whether you have enabled parseable URLs, you can force all URLs to have a rel="nofollow" attribute. This will be added if it does not exist, but only when the `href` is valid.
 
 ```go
 // This applies to "a" "area" "link" elements that have a "href" attribute
 p.RequireNoFollowOnLinks(true)
 ```
 
-We provide a convenience method that applies all of the above, but you will still need to whitelist the linkable elements:
+We provide a convenience method that applies all of the above, but you will still need to whitelist the linkable elements for the URL rules to be applied to:
 
 ```go
 p.AllowStandardURLs()
-p.AllowAttrs("cite").OnElements("blockquote")
+p.AllowAttrs("cite").OnElements("blockquote", "q")
 p.AllowAttrs("href").OnElements("a", "area")
 p.AllowAttrs("src").OnElements("img")
 ```
@@ -252,15 +270,15 @@ p.AllowAttrs("value")
 p.AllowAttrs(
 	"type",
 ).Matching(
-	regexp.MustCompile("(?i)circle|disc|square|a|A|i|I|1"),
+	regexp.MustCompile("(?i)^(circle|disc|square|a|A|i|I|1)$"),
 )
 ```
 
-Both examples exhibit the same issues, they declared attributes but didn't then specify whether they are whitelisted globally or only on specific elements (and which elements).
+Both examples exhibit the same issue, they declare attributes but do not then specify whether they are whitelisted globally or only on specific elements (and which elements). Attributes belong to one or more elements, and the policy needs to declare this.
 
 ## Limitations
 
-In this early release we are focusing on sanitizing HTML elements and attributes only. We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression (inadvisable), **you should not allow the "style" attribute anywhere**.
+We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression (inadvisable), **you should not allow the "style" attribute anywhere**.
 
 It is not the job of bluemonday to fix your bad HTML, it is merely the job of bluemonday to prevent malicious HTML getting through. If you have mismatched HTML elements, or non-conforming nesting of elements, those will remain. But if you have well-structured HTML bluemonday will not break it.
 
