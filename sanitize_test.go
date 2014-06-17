@@ -1163,7 +1163,7 @@ func TestIssue3(t *testing.T) {
 			expected: `Hello <span>there</span> world.`,
 		},
 		test{
-			in:       `Hello <span class="><script src='"'http://hackers.org/XSS.js'"'></script>">there</span> world.`,
+			in:       `Hello <span class="><script src="http://hackers.org/XSS.js"></script>">there</span> world.`,
 			expected: `Hello <span>&#34;&gt;there</span> world.`,
 		},
 	}
