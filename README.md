@@ -68,7 +68,7 @@ We do not support Go 1.0 as we depend on `code.google.com/p/go.net/html` which i
 
 We are using bluemonday in production having migrated from the widely used and heavily field tested OWASP Java HTML Sanitizer.
 
-We passing our extensive test suite (including AntiSamy tests as well as tests for any issues raised). Check for any [unresolved issues](https://github.com/microcosm-cc/bluemonday/issues?page=1&state=open) to see whether anything may be a blocker for you.
+We are passing our extensive test suite (including AntiSamy tests as well as tests for any issues raised). Check for any [unresolved issues](https://github.com/microcosm-cc/bluemonday/issues?page=1&state=open) to see whether anything may be a blocker for you.
 
 We invite pull requests and issues to help us ensure we are offering comprehensive protection against various attacks via user generated content.
 
