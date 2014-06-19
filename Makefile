@@ -14,31 +14,35 @@
 
 .PHONY: all fmt build vet lint test cover clean install
 
-# The first target is always the default action if `make` is called without args
-# We clean, build and install into $GOPATH so that it can just be run
+# The first target is always the default action if `make` is called without
+# args we clean, build and install into $GOPATH so that it can just be run
+
 all: clean fmt vet test install
 
 fmt:
-	gofmt -w ./$*
+	@gofmt -w ./$*
 
+build: export GOOS=linux
+build: export GOARCH=amd64
 build: clean
-	GOOS=linux GOARCH=amd64 go build
+	@go build
 
 vet:
-	go tool vet *.go
+	@go tool vet *.go
 
 lint:
-	golint *.go
+	@golint *.go
 
 test:
-	go test -v ./...
+	@go test -v ./...
 
+cover: COVERAGE_FILE := coverage.out
 cover:
-	go test -coverprofile=coverage.out && \
-	go tool cover -html=coverage.out && rm coverage.out
+	@go test -coverprofile=$(COVERAGE_FILE) && \
+	go tool cover -html=$(COVERAGE_FILE) && rm $(COVERAGE_FILE)
 
 clean:
-	find $(GOPATH)/pkg/*/github.com/microcosm-cc -name bluemonday.a -delete
+	@find $(GOPATH)/pkg/*/github.com/microcosm-cc -name bluemonday.a -delete
 
 install: clean
-	go install
+	@go install
