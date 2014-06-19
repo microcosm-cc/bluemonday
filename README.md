@@ -1,31 +1,27 @@
 # bluemonday [![Build Status](https://travis-ci.org/microcosm-cc/bluemonday.svg?branch=master)](https://travis-ci.org/microcosm-cc/bluemonday) [![GoDoc](https://godoc.org/github.com/microcosm-cc/bluemonday?status.png)](https://godoc.org/github.com/microcosm-cc/bluemonday)
 
-bluemonday is a whitelist based HTML sanitizer implemented in Go. It is fast and highly configurable.
+bluemonday is a HTML sanitizer implemented in Go. It is fast and highly configurable.
 
 Supply it user generated content and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes.
 
 If you accept user generated content and your server uses Go, you **need** bluemonday.
 
-The default `bluemonday.UGCPolicy().Sanitize()` turns this:
-
+The default policy for user generated content (`bluemonday.UGCPolicy().Sanitize()`) turns this:
 ```html
 Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World
 ```
 
 Into a harmless:
-
 ```html
 Hello World
 ```
 
 And it turns this:
-
 ```html
 <a href="javascript:alert('XSS1')" onmouseover="alert('XSS2')">XSS<a>
 ```
 
 Into this:
-
 ```html
 XSS
 ```
@@ -38,7 +34,6 @@ Whilst still allowing this:
 ```
 
 To pass through mostly unaltered (it gained a rel="nofollow" which is a good thing for user generated content):
-
 ```html
 <a href="http://www.google.com/" rel="nofollow">
   <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png"/>
@@ -59,7 +54,13 @@ Whitelist based, you must either build a policy describing the HTML elements and
 
 The policy containing the whitelist is applied using a fast SAX-like tokenizer implemented in the [Go net/html library](https://code.google.com/p/go/source/browse/?repo=net#hg%2Fhtml) by the core Go team.
 
-We expect to be supplied by well-formatted HTML (closing elements for every applicable open element, nested correctly), and so we do not focus on repairing badly nested or incomplete HTML. We focus on simply ensuring that whatever elements do exist are described in the policy whitelist along with the attributes, and that links are safe. This means that [GIGO](http://en.wikipedia.org/wiki/Garbage_in,_garbage_out) does apply and if you feed it bad HTML bluemonday is not tasked with figuring out how to make it good again.
+We expect to be supplied with well-formatted HTML (closing elements for every applicable open element, nested correctly) and so we do not focus on repairing badly nested or incomplete HTML. We focus on simply ensuring that whatever elements do exist are described in the policy whitelist and that attributes and links are safe for use on your web page. [GIGO](http://en.wikipedia.org/wiki/Garbage_in,_garbage_out) does apply and if you feed it bad HTML bluemonday is not tasked with figuring out how to make it good again.
+
+### Supported Go Versions
+
+bluemonday is regularly tested against Go 1.1, 1.2, 1.3 and tip.
+
+We do not support Go 1.0 as we depend on `code.google.com/p/go.net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
 
 ## Is it production ready?
 
@@ -143,53 +144,45 @@ The essence of building a policy is to determine which HTML elements and attribu
 Basically, you should be able to describe what HTML is fine for your scenario. If you do not have confidence that you can describe your policy please consider using one of the shipped policies such as `bluemonday.UGCPolicy()`.
 
 To create a new policy:
-
 ```go
 p := bluemonday.NewPolicy()
 ```
 
 To add elements to a policy either add just the elements:
-
 ```go
 p.AllowElements("b", "strong")
 ```
 
 Or add elements as a virtue of adding an attribute:
-
 ```go
 // Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("nowrap").OnElements("td", "th")
 ```
 
 Attributes can either be added to all elements:
-
 ```go
 p.AllowAttrs("dir").Matching(regexp.MustCompile("(?i)rtl|ltr")).Globally()
 ```
 
 Or attributes can be added to specific elements:
-
 ```go
 // Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("value").OnElements("li")
 ```
 
 It is **always** recommended that an attribute be made to match a pattern. XSS in HTML attributes is very easy otherwise:
-
 ```go
 // \p{L} matches unicode letters, \p{N} matches unicode numbers
 p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()
 ```
 
 You can stop at any time and call .Sanitize():
-
 ```go
 // string htmlIn passed in from a HTTP POST
 htmlOut := p.Sanitize(htmlIn)
 ```
 
 And you can take any existing policy and extend it:
-
 ```go
 p := bluemonday.UGCPolicy()
 p.AllowElements("fieldset", "select", "option")
@@ -197,45 +190,39 @@ p.AllowElements("fieldset", "select", "option")
 
 ### Links
 
-Links are complex beasts and one of the biggest attack vectors for malicious content.
+Links are difficult beasts to sanitise safely and also one of the biggest attack vectors for malicious content.
 
 It is possible to do this:
-
 ```go
 p.AllowAttrs("href").Matching(regexp.MustCompile(`(?i)mailto|https?`)).OnElements("a")
 ```
 
-But that may not help you as the regexp is insufficient in this case to have prevented a malformed value doing something unexpected.
+But that will not protect you as the regular expression is insufficient in this case to have prevented a malformed value doing something unexpected.
 
 We provide some additional global options for safely working with links.
 
-`RequireParseableURLs` will ensure that URLs are parseable by Go's `net/url` package.
-
+`RequireParseableURLs` will ensure that URLs are parseable by Go's `net/url` package:
 ```go
 p.RequireParseableURLs(true)
 ```
 
-If you have enabled parseable URLs then the following option will `AllowRelativeURLs`. By default this is disabled (bluemonday is a whitelist tool... you need to explicitly tell us to permit things) and when disabled it will prevent all local and scheme relative URLs (i.e. `href="localpage.html"`, `href="../home.html"` and even `href="//www.google.com"` are relative).
-
+If you have enabled parseable URLs then the following option will `AllowRelativeURLs`. By default this is disabled (bluemonday is a whitelist tool... you need to explicitly tell us to permit things) and when disabled it will prevent all local and scheme relative URLs (i.e. `href="localpage.html"`, `href="../home.html"` and even `href="//www.google.com"` are relative):
 ```go
 p.AllowRelativeURLs(true)
 ```
 
-If you have enabled parseable URLs then you can whitelist the schemes (commonly called protocol when thinking of `http` and `https`) that are permitted. Bear in mind that allowing relative URLs in the above option will allow for a blank scheme.
-
+If you have enabled parseable URLs then you can whitelist the schemes (commonly called protocol when thinking of `http` and `https`) that are permitted. Bear in mind that allowing relative URLs in the above option will allow for a blank scheme:
 ```go
 p.AllowURLSchemes("mailto", "http", "https")
 ```
 
-Regardless of whether you have enabled parseable URLs, you can force all URLs to have a rel="nofollow" attribute. This will be added if it does not exist, but only when the `href` is valid.
-
+Regardless of whether you have enabled parseable URLs, you can force all URLs to have a rel="nofollow" attribute. This will be added if it does not exist, but only when the `href` is valid:
 ```go
 // This applies to "a" "area" "link" elements that have a "href" attribute
 p.RequireNoFollowOnLinks(true)
 ```
 
 We provide a convenience method that applies all of the above, but you will still need to whitelist the linkable elements for the URL rules to be applied to:
-
 ```go
 p.AllowStandardURLs()
 p.AllowAttrs("cite").OnElements("blockquote", "q")
@@ -245,19 +232,25 @@ p.AllowAttrs("src").OnElements("img")
 
 ### Policy Building Helpers
 
-If you've got this far and you're bored already, we also bundle some helpers:
-
+We also bundle some helpers to simplify policy building:
 ```go
+
+// Permits the "dir", "id", "lang", "title" attributes globally
 p.AllowStandardAttributes()
+
+// Permits the "img" element and it's standard attributes
 p.AllowImages()
+
+// Permits ordered and unordered lists, and also definition lists
 p.AllowLists()
+
+// Permits HTML tables and all applicable elements and non-styling attributes
 p.AllowTables()
 ```
 
 ### Invalid Instructions
 
 The following are invalid:
-
 ```go
 // This does not say where the attributes are allowed, you need to add
 // .Globally() or .OnElements(...)
