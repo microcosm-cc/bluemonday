@@ -12,6 +12,8 @@
 #
 #   install:      Builds, tests and installs the code locally
 
+.PHONY: all fmt build vet lint test cover clean install
+
 # The first target is always the default action if `make` is called without args
 # We clean, build and install into $GOPATH so that it can just be run
 all: clean fmt vet test install
