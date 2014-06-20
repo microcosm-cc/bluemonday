@@ -129,7 +129,9 @@ func main() {
 }
 ```
 
-We ship two default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist. An example usage scenario would be blog post titles where HTML tags are not expected at all.
+We ship three default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist. An example usage scenario would be blog post titles where HTML tags are not expected at all and if they are then the elements *and* the content of the elements should be stripped. This is a *very* strict policy.
+
+Another is `bluemonday.StripTagsPolicy()` which will strip all HTML elements and their attributes the text, but will preserve the textual content between the start and end tag of an element in the vast majority of cases. This also has a usage scenario similar to blog titles, but now expects HTML in the input and acts to preserve as much of the displayable text as possible whilst discarding the HTML.
 
 The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
 
