@@ -2,9 +2,9 @@
 
 bluemonday is a HTML sanitizer implemented in Go. It is fast and highly configurable.
 
-Supply it user generated content and it will give back HTML that has been sanitised using a whitelist of approved HTML elements and attributes.
+bluemonday takes untrusted user generated content as an input, and will return HTML that has been sanitised against a whitelist of approved HTML elements and attributes so that you can safely include the content in your web page.
 
-If you accept user generated content and your server uses Go, you **need** bluemonday.
+If you accept user generated content, and your server uses Go, you **need** bluemonday.
 
 The default policy for user generated content (`bluemonday.UGCPolicy().Sanitize()`) turns this:
 ```html
@@ -40,7 +40,7 @@ To pass through mostly unaltered (it gained a rel="nofollow" which is a good thi
 </a>
 ```
 
-It protects sites against [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) and other malicious content that a user interface may deliver. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the safest thing to do is to sanitize user input against a known safe list of HTML elements and attributes.
+It protects sites from [XSS](http://en.wikipedia.org/wiki/Cross-site_scripting) attacks. There are many [vectors for an XSS attack](https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet) and the best way to mitigate the risk is to sanitize user input against a known safe list of HTML elements and attributes.
 
 You should **always** run bluemonday **after** any other processing.
 
@@ -50,7 +50,7 @@ bluemonday is heavily inspired by both the [OWASP Java HTML Sanitizer](https://c
 
 ## Technical Summary
 
-Whitelist based, you must either build a policy describing the HTML elements and attributes to permit (and the `regexp` patterns of attributes) or use one of the supplied policies representing good defaults.
+Whitelist based, you need to either build a policy describing the HTML elements and attributes to permit (and the `regexp` patterns of attributes), or use one of the supplied policies representing good defaults.
 
 The policy containing the whitelist is applied using a fast SAX-like tokenizer implemented in the [Go net/html library](https://code.google.com/p/go/source/browse/?repo=net#hg%2Fhtml) by the core Go team.
 
@@ -129,11 +129,11 @@ func main() {
 }
 ```
 
-We ship three default policies, one is `bluemonday.StrictPolicy()` and can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist. An example usage scenario would be blog post titles where HTML tags are not expected at all and if they are then the elements *and* the content of the elements should be stripped. This is a *very* strict policy.
+We ship three default policies:
 
-Another is `bluemonday.StripTagsPolicy()` which will strip all HTML elements and their attributes the text, but will preserve the textual content between the start and end tag of an element in the vast majority of cases. This also has a usage scenario similar to blog titles, but now expects HTML in the input and acts to preserve as much of the displayable text as possible whilst discarding the HTML.
-
-The other is `bluemonday.UGCPolicy()` and allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
+1. `bluemonday.StrictPolicy()` which can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on it's whitelist. An example usage scenario would be blog post titles where HTML tags are not expected at all and if they are then the elements *and* the content of the elements should be stripped. This is a *very* strict policy.
+2. `bluemonday.StripTagsPolicy()` which will strip all HTML elements and their attributes the text, but will preserve the textual content between the start and end tag of an element in the vast majority of cases. This also has a usage scenario similar to blog titles, but now expects HTML in the input and acts to preserve as much of the displayable text as possible whilst discarding the HTML.
+3. `bluemonday.UGCPolicy()` which allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* whitelist iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
 
 ## Policy Building
 
