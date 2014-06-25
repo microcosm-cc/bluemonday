@@ -192,6 +192,11 @@ func TestUGCPolicy(t *testing.T) {
 			in:       `xss<a href="http://www.google.de" style="color:red;" onmouseover=alert(1) onmousemove="alert(2)" onclick=alert(3)>g<img src="http://example.org"/>oogle</a>`,
 			expected: `xss<a href="http://www.google.de" rel="nofollow">g<img src="http://example.org"/>oogle</a>`,
 		},
+		// OWASP 25 June 2014 09:15 Strange behaviour
+		test{
+			in:       "<table>Hallo\r\n<script>SCRIPT</script>\nEnde\n\r",
+			expected: "<table>Hallo\n\nEnde",
+		},
 	}
 
 	p := UGCPolicy()
