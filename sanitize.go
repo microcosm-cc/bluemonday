@@ -60,7 +60,7 @@ func (p *Policy) Sanitize(s string) string {
 	var cleanHTML bytes.Buffer
 	tokenizer := html.NewTokenizer(strings.NewReader(s))
 
-	ignore := false
+	skipElementContent := false
 	skipClosingTag := false
 	for {
 		if tokenizer.Next() == html.ErrorToken {
@@ -90,7 +90,9 @@ func (p *Policy) Sanitize(s string) string {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				ignore = true
+				if _, ok := p.skipElemContent[token.Data]; ok {
+					skipElementContent = true
+				}
 				break
 			}
 
@@ -116,7 +118,9 @@ func (p *Policy) Sanitize(s string) string {
 
 			_, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				ignore = false
+				if _, ok := p.skipElemContent[token.Data]; ok {
+					skipElementContent = false
+				}
 				break
 			}
 
@@ -141,7 +145,7 @@ func (p *Policy) Sanitize(s string) string {
 
 		case html.TextToken:
 
-			if !ignore {
+			if !skipElementContent {
 				cleanHTML.WriteString(token.String())
 			}
 

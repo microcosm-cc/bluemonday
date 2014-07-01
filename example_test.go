@@ -156,7 +156,7 @@ func ExampleStrictPolicy() {
 	fmt.Println(html)
 
 	// Output:
-	//Goodbye  World
+	//Goodbye Cruel World
 }
 
 func ExampleStripTagsPolicy() {

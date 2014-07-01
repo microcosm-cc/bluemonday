@@ -38,7 +38,7 @@ func TestStrictPolicy(t *testing.T) {
 	p := StrictPolicy()
 
 	in := "Hello, <b>World</b>!"
-	expected := "Hello, !"
+	expected := "Hello, World!"
 	out := p.Sanitize(in)
 	if out != expected {
 		t.Errorf(
@@ -58,8 +58,18 @@ func TestStripTagsPolicy(t *testing.T) {
 	}
 
 	tests := []test{
-		test{in: "Hello, <b>World</b>!", expected: "Hello, World!"},
-		test{in: "<blockquote>Hello, <b>World</b>!", expected: "Hello, World!"},
+		test{
+			in:       "Hello, <b>World</b>!",
+			expected: "Hello, World!",
+		},
+		test{
+			in:       "<blockquote>Hello, <b>World</b>!",
+			expected: "Hello, World!",
+		},
+		test{ // Real world example from a message board
+			in:       `<quietly>email me - addy in profile</quiet>`,
+			expected: `email me - addy in profile`,
+		},
 	}
 
 	p := StripTagsPolicy()
@@ -181,8 +191,8 @@ func TestUGCPolicy(t *testing.T) {
 				`<th>Column One</th><th>Column Two</th>` +
 				`</tr>` +
 				`<tr>` +
-				`<td align="center"></td>` +
-				`<td align="center"></td>` +
+				`<td align="center">Size 2</td>` +
+				`<td align="center">Size 7</td>` +
 				`</tr>` +
 				`</tbody>` +
 				`</table>`,

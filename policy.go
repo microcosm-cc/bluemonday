@@ -67,8 +67,16 @@ type Policy struct {
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
 
-	// map[htmlElementName]bool
+	// Simply existing in this map is enough to allow an element to be rendered
+	// when there are no attributes:
+	//   map[htmlElementName]bool
 	elsWithoutAttrs map[string]bool
+
+	// Simply existing in this map is enough to exclude content being rendered
+	// after an opening element has been encountered, up until the closing tag
+	// is found:
+	//   map[htmlElementName]bool
+	skipElemContent map[string]bool
 }
 
 type attrPolicy struct {
@@ -92,6 +100,7 @@ func (p *Policy) init() {
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
 		p.elsWithoutAttrs = make(map[string]bool)
+		p.skipElemContent = make(map[string]bool)
 		p.initialized = true
 	}
 }
@@ -105,6 +114,7 @@ func NewPolicy() *Policy {
 	p := Policy{}
 
 	p.addDefaultElsWithoutAttrs()
+	p.addDefaultSkipElementContent()
 
 	return &p
 }
@@ -361,4 +371,25 @@ func (p *Policy) addDefaultElsWithoutAttrs() {
 	p.elsWithoutAttrs["video"] = true
 	p.elsWithoutAttrs["wbr"] = true
 
+}
+
+// addDefaultSkipElementContent adds the HTML elements that we should skip
+// rendering the character content of, if the element itself is not allowed.
+// This is all character data that the end user would not normally see.
+// i.e. if we exclude a <script> tag then we shouldn't render the JavaScript or
+// anything else until we encounter the closing </script> tag.
+func (p *Policy) addDefaultSkipElementContent() {
+	p.init()
+
+	p.skipElemContent["frame"] = true
+	p.skipElemContent["frameset"] = true
+	p.skipElemContent["iframe"] = true
+	p.skipElemContent["noembed"] = true
+	p.skipElemContent["noframes"] = true
+	p.skipElemContent["noscript"] = true
+	p.skipElemContent["nostyle"] = true
+	p.skipElemContent["object"] = true
+	p.skipElemContent["script"] = true
+	p.skipElemContent["style"] = true
+	p.skipElemContent["title"] = true
 }

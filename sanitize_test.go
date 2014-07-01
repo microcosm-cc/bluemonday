@@ -341,7 +341,7 @@ func TestAntiSamy(t *testing.T) {
 		},
 		test{
 			in:       `<script<script src=http://fake-evil.ru/test.js>>`,
-			expected: ``,
+			expected: `&gt;`,
 		},
 		test{
 			in:       `<SCRIPT/XSS SRC="http://ha.ckers.org/xss.js"></SCRIPT>`,
@@ -669,7 +669,7 @@ tt	p://6	6.000146.0x7.147/">XSS</A>`,
 		},
 		test{
 			in:       `<HEAD><META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=UTF-7"> </HEAD>+ADw-SCRIPT+AD4-alert('XSS')`,
-			expected: `+ADw-SCRIPT+AD4-alert(&#39;XSS&#39;)`,
+			expected: ` +ADw-SCRIPT+AD4-alert(&#39;XSS&#39;)`,
 		},
 		test{
 			in:       `<META HTTP-EQUIV="Set-Cookie" Content="USERID=<SCRIPT>alert('XSS')</SCRIPT>">`,
@@ -690,7 +690,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 <?import namespace="t" implementation="#default#time2">
 <t:set attributeName="innerHTML" to="XSS<SCRIPT DEFER>alert("XSS")</SCRIPT>">
 </BODY></HTML>`,
-			expected: ``,
+			expected: "\n\n\n&#34;&gt;\n",
 		},
 		test{
 			in: `<XML SRC="xsstest.xml" ID=I></XML>
@@ -964,7 +964,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       `'';!--"<XSS>=&{()}`,
-			expected: `&#39;&#39;;!--&#34;`,
+			expected: `&#39;&#39;;!--&#34;=&amp;{()}`,
 		},
 		test{
 			in:       `';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//--></SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>`,
