@@ -232,6 +232,22 @@ p.AllowAttrs("href").OnElements("a", "area")
 p.AllowAttrs("src").OnElements("img")
 ```
 
+An additional complexity regarding links is the data URI as defined in [RFC2397](http://tools.ietf.org/html/rfc2397). The data URI allows for images to be served inline using this format:
+
+```html
+<img src="data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=">
+```
+
+We have provided a helper to verify the mimetype followed by base64 content of data URIs links:
+
+```go
+p.AllowDataURIImages()
+```
+
+That helper will enable GIF, JPEG, PNG and WEBP images.
+
+It should be noted that there is a potential [security](http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/) [risk](https://capec.mitre.org/data/definitions/244.html) with the use of data URI links. You should only enable data URI links if you already trust the content.
+
 ### Policy Building Helpers
 
 We also bundle some helpers to simplify policy building:

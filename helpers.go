@@ -30,6 +30,8 @@
 package bluemonday
 
 import (
+	"encoding/base64"
+	"net/url"
 	"regexp"
 )
 
@@ -175,6 +177,54 @@ func (p *Policy) AllowImages() {
 	// isn't included in the policy
 	p.AllowStandardURLs()
 	p.AllowAttrs("src").OnElements("img")
+}
+
+// AllowDataURIImages permits the use of inline images defined in RFC2397
+// http://tools.ietf.org/html/rfc2397
+// http://en.wikipedia.org/wiki/Data_URI_scheme
+//
+// Images must have a mimetype matching:
+//   image/gif
+//   image/jpeg
+//   image/png
+//   image/webp
+//
+// NOTE: There is a potential security risk to allowing data URIs and you should
+// only permit them on content you already trust.
+// http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/
+// https://capec.mitre.org/data/definitions/244.html
+func (p *Policy) AllowDataURIImages() {
+
+	// URLs must be parseable by net/url.Parse()
+	p.RequireParseableURLs(true)
+
+	// !url.IsAbs() is permitted
+	p.AllowRelativeURLs(true)
+
+	// Supply a function to validate images contained within data URI
+	p.AllowURLSchemeWithCustomPolicy(
+		"data",
+		func(url *url.URL) (allowUrl bool) {
+			if url.RawQuery != "" || url.Fragment != "" {
+				return false
+			}
+
+			dataURIImagePrefix := regexp.MustCompile(
+				`^image/(gif|jpeg|png|webp);base64,`,
+			)
+			matched := dataURIImagePrefix.FindString(url.Opaque)
+			if matched == "" {
+				return false
+			}
+
+			_, err := base64.StdEncoding.DecodeString(url.Opaque[len(matched):])
+			if err != nil {
+				return false
+			}
+
+			return true
+		},
+	)
 }
 
 // AllowLists will enabled ordered and unordered lists, as well as definition

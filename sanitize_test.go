@@ -30,7 +30,10 @@
 package bluemonday
 
 import (
+	"encoding/base64"
+	"net/url"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -230,6 +233,65 @@ func TestEmptyAttributes(t *testing.T) {
 		test{
 			in:       `foo<hr noshade>bar`,
 			expected: `foo<hr>bar`,
+		},
+	}
+
+	for ii, test := range tests {
+		out := p.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				ii,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
+func TestDataUri(t *testing.T) {
+
+	p := UGCPolicy()
+	p.AllowURLSchemeWithCustomPolicy(
+		"data",
+		func(url *url.URL) (allowUrl bool) {
+			// Allows PNG images only
+			const prefix = "image/png;base64,"
+			if !strings.HasPrefix(url.Opaque, prefix) {
+				return false
+			}
+			if _, err := base64.StdEncoding.DecodeString(url.Opaque[len(prefix):]); err != nil {
+				return false
+			}
+			if url.RawQuery != "" || url.Fragment != "" {
+				return false
+			}
+			return true
+		},
+	)
+
+	type test struct {
+		in       string
+		expected string
+	}
+
+	tests := []test{
+		test{
+			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==">`,
+			expected: `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==">`,
+		},
+		test{
+			in:       `<img src="data:text/javascript;charset=utf-8,alert('hi');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<img src="data:image/png;base64,charset=utf-8,alert('hi');">`,
+			expected: ``,
+		},
+		test{
+			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4-_8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==">`,
+			expected: ``,
 		},
 	}
 
