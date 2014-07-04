@@ -256,7 +256,7 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 	for _, scheme := range schemes {
 		scheme = strings.ToLower(scheme)
 
-		if _, ok := p.urlSchemes[scheme]; !ok {
+		if !p.urlSchemes[scheme] {
 			p.urlSchemes[scheme] = true
 		}
 	}
