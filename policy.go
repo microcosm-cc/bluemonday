@@ -58,25 +58,15 @@ type Policy struct {
 	// When true, u, _ := url.Parse("url"); !u.IsAbs() is permitted
 	allowRelativeURLs bool
 
-	// map[urlScheme]bool
-	urlSchemes map[string]bool
-
 	// map[htmlElementName]map[htmlAttributeName]attrPolicy
 	elsAndAttrs map[string]map[string]attrPolicy
 
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
 
-	// Simply existing in this map is enough to allow an element to be rendered
-	// when there are no attributes:
-	//   map[htmlElementName]bool
-	elsWithoutAttrs map[string]bool
-
-	// Simply existing in this map is enough to exclude content being rendered
-	// after an opening element has been encountered, up until the closing tag
-	// is found:
-	//   map[htmlElementName]bool
-	skipElemContent map[string]bool
+	setOfUrlSchemes            map[string]struct{}
+	setOfElementsWithoutAttrs  map[string]struct{}
+	setOfElementsToSkipContent map[string]struct{}
 }
 
 type attrPolicy struct {
@@ -96,11 +86,11 @@ type attrPolicyBuilder struct {
 // init initializes the maps if this has not been done already
 func (p *Policy) init() {
 	if !p.initialized {
-		p.urlSchemes = make(map[string]bool)
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
-		p.elsWithoutAttrs = make(map[string]bool)
-		p.skipElemContent = make(map[string]bool)
+		p.setOfUrlSchemes = make(map[string]struct{})
+		p.setOfElementsWithoutAttrs = make(map[string]struct{})
+		p.setOfElementsToSkipContent = make(map[string]struct{})
 		p.initialized = true
 	}
 }
@@ -113,7 +103,7 @@ func NewPolicy() *Policy {
 
 	p := Policy{}
 
-	p.addDefaultElsWithoutAttrs()
+	p.addDefaultElementsWithoutAttrs()
 	p.addDefaultSkipElementContent()
 
 	return &p
@@ -256,8 +246,8 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 	for _, scheme := range schemes {
 		scheme = strings.ToLower(scheme)
 
-		if !p.urlSchemes[scheme] {
-			p.urlSchemes[scheme] = true
+		if _, ok := p.setOfUrlSchemes[scheme]; !ok {
+			p.setOfUrlSchemes[scheme] = struct{}{}
 		}
 	}
 
@@ -279,97 +269,97 @@ func (p *Policy) AllowDocType(allow bool) *Policy {
 	return p
 }
 
-// addDefaultElsWithoutAttrs adds the HTML elements that we know are valid
+// addDefaultElementsWithoutAttrs adds the HTML elements that we know are valid
 // without any attributes to an internal map.
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
 // is mandatory
-func (p *Policy) addDefaultElsWithoutAttrs() {
+func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.init()
 
-	p.elsWithoutAttrs["abbr"] = true
-	p.elsWithoutAttrs["acronym"] = true
-	p.elsWithoutAttrs["article"] = true
-	p.elsWithoutAttrs["aside"] = true
-	p.elsWithoutAttrs["audio"] = true
-	p.elsWithoutAttrs["b"] = true
-	p.elsWithoutAttrs["bdi"] = true
-	p.elsWithoutAttrs["blockquote"] = true
-	p.elsWithoutAttrs["body"] = true
-	p.elsWithoutAttrs["br"] = true
-	p.elsWithoutAttrs["button"] = true
-	p.elsWithoutAttrs["canvas"] = true
-	p.elsWithoutAttrs["caption"] = true
-	p.elsWithoutAttrs["cite"] = true
-	p.elsWithoutAttrs["code"] = true
-	p.elsWithoutAttrs["col"] = true
-	p.elsWithoutAttrs["colgroup"] = true
-	p.elsWithoutAttrs["datalist"] = true
-	p.elsWithoutAttrs["dd"] = true
-	p.elsWithoutAttrs["del"] = true
-	p.elsWithoutAttrs["details"] = true
-	p.elsWithoutAttrs["dfn"] = true
-	p.elsWithoutAttrs["div"] = true
-	p.elsWithoutAttrs["dl"] = true
-	p.elsWithoutAttrs["dt"] = true
-	p.elsWithoutAttrs["em"] = true
-	p.elsWithoutAttrs["fieldset"] = true
-	p.elsWithoutAttrs["figcaption"] = true
-	p.elsWithoutAttrs["figure"] = true
-	p.elsWithoutAttrs["footer"] = true
-	p.elsWithoutAttrs["h1"] = true
-	p.elsWithoutAttrs["h2"] = true
-	p.elsWithoutAttrs["h3"] = true
-	p.elsWithoutAttrs["h4"] = true
-	p.elsWithoutAttrs["h5"] = true
-	p.elsWithoutAttrs["h6"] = true
-	p.elsWithoutAttrs["head"] = true
-	p.elsWithoutAttrs["header"] = true
-	p.elsWithoutAttrs["hgroup"] = true
-	p.elsWithoutAttrs["hr"] = true
-	p.elsWithoutAttrs["html"] = true
-	p.elsWithoutAttrs["i"] = true
-	p.elsWithoutAttrs["ins"] = true
-	p.elsWithoutAttrs["kbd"] = true
-	p.elsWithoutAttrs["li"] = true
-	p.elsWithoutAttrs["mark"] = true
-	p.elsWithoutAttrs["nav"] = true
-	p.elsWithoutAttrs["ol"] = true
-	p.elsWithoutAttrs["optgroup"] = true
-	p.elsWithoutAttrs["option"] = true
-	p.elsWithoutAttrs["p"] = true
-	p.elsWithoutAttrs["pre"] = true
-	p.elsWithoutAttrs["q"] = true
-	p.elsWithoutAttrs["rp"] = true
-	p.elsWithoutAttrs["rt"] = true
-	p.elsWithoutAttrs["ruby"] = true
-	p.elsWithoutAttrs["s"] = true
-	p.elsWithoutAttrs["samp"] = true
-	p.elsWithoutAttrs["section"] = true
-	p.elsWithoutAttrs["select"] = true
-	p.elsWithoutAttrs["small"] = true
-	p.elsWithoutAttrs["span"] = true
-	p.elsWithoutAttrs["strike"] = true
-	p.elsWithoutAttrs["strong"] = true
-	p.elsWithoutAttrs["style"] = true
-	p.elsWithoutAttrs["sub"] = true
-	p.elsWithoutAttrs["summary"] = true
-	p.elsWithoutAttrs["sup"] = true
-	p.elsWithoutAttrs["svg"] = true
-	p.elsWithoutAttrs["table"] = true
-	p.elsWithoutAttrs["tbody"] = true
-	p.elsWithoutAttrs["td"] = true
-	p.elsWithoutAttrs["textarea"] = true
-	p.elsWithoutAttrs["tfoot"] = true
-	p.elsWithoutAttrs["th"] = true
-	p.elsWithoutAttrs["thead"] = true
-	p.elsWithoutAttrs["time"] = true
-	p.elsWithoutAttrs["tr"] = true
-	p.elsWithoutAttrs["tt"] = true
-	p.elsWithoutAttrs["u"] = true
-	p.elsWithoutAttrs["ul"] = true
-	p.elsWithoutAttrs["var"] = true
-	p.elsWithoutAttrs["video"] = true
-	p.elsWithoutAttrs["wbr"] = true
+	p.setOfElementsWithoutAttrs["abbr"] = struct{}{}
+	p.setOfElementsWithoutAttrs["acronym"] = struct{}{}
+	p.setOfElementsWithoutAttrs["article"] = struct{}{}
+	p.setOfElementsWithoutAttrs["aside"] = struct{}{}
+	p.setOfElementsWithoutAttrs["audio"] = struct{}{}
+	p.setOfElementsWithoutAttrs["b"] = struct{}{}
+	p.setOfElementsWithoutAttrs["bdi"] = struct{}{}
+	p.setOfElementsWithoutAttrs["blockquote"] = struct{}{}
+	p.setOfElementsWithoutAttrs["body"] = struct{}{}
+	p.setOfElementsWithoutAttrs["br"] = struct{}{}
+	p.setOfElementsWithoutAttrs["button"] = struct{}{}
+	p.setOfElementsWithoutAttrs["canvas"] = struct{}{}
+	p.setOfElementsWithoutAttrs["caption"] = struct{}{}
+	p.setOfElementsWithoutAttrs["cite"] = struct{}{}
+	p.setOfElementsWithoutAttrs["code"] = struct{}{}
+	p.setOfElementsWithoutAttrs["col"] = struct{}{}
+	p.setOfElementsWithoutAttrs["colgroup"] = struct{}{}
+	p.setOfElementsWithoutAttrs["datalist"] = struct{}{}
+	p.setOfElementsWithoutAttrs["dd"] = struct{}{}
+	p.setOfElementsWithoutAttrs["del"] = struct{}{}
+	p.setOfElementsWithoutAttrs["details"] = struct{}{}
+	p.setOfElementsWithoutAttrs["dfn"] = struct{}{}
+	p.setOfElementsWithoutAttrs["div"] = struct{}{}
+	p.setOfElementsWithoutAttrs["dl"] = struct{}{}
+	p.setOfElementsWithoutAttrs["dt"] = struct{}{}
+	p.setOfElementsWithoutAttrs["em"] = struct{}{}
+	p.setOfElementsWithoutAttrs["fieldset"] = struct{}{}
+	p.setOfElementsWithoutAttrs["figcaption"] = struct{}{}
+	p.setOfElementsWithoutAttrs["figure"] = struct{}{}
+	p.setOfElementsWithoutAttrs["footer"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h1"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h2"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h3"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h4"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h5"] = struct{}{}
+	p.setOfElementsWithoutAttrs["h6"] = struct{}{}
+	p.setOfElementsWithoutAttrs["head"] = struct{}{}
+	p.setOfElementsWithoutAttrs["header"] = struct{}{}
+	p.setOfElementsWithoutAttrs["hgroup"] = struct{}{}
+	p.setOfElementsWithoutAttrs["hr"] = struct{}{}
+	p.setOfElementsWithoutAttrs["html"] = struct{}{}
+	p.setOfElementsWithoutAttrs["i"] = struct{}{}
+	p.setOfElementsWithoutAttrs["ins"] = struct{}{}
+	p.setOfElementsWithoutAttrs["kbd"] = struct{}{}
+	p.setOfElementsWithoutAttrs["li"] = struct{}{}
+	p.setOfElementsWithoutAttrs["mark"] = struct{}{}
+	p.setOfElementsWithoutAttrs["nav"] = struct{}{}
+	p.setOfElementsWithoutAttrs["ol"] = struct{}{}
+	p.setOfElementsWithoutAttrs["optgroup"] = struct{}{}
+	p.setOfElementsWithoutAttrs["option"] = struct{}{}
+	p.setOfElementsWithoutAttrs["p"] = struct{}{}
+	p.setOfElementsWithoutAttrs["pre"] = struct{}{}
+	p.setOfElementsWithoutAttrs["q"] = struct{}{}
+	p.setOfElementsWithoutAttrs["rp"] = struct{}{}
+	p.setOfElementsWithoutAttrs["rt"] = struct{}{}
+	p.setOfElementsWithoutAttrs["ruby"] = struct{}{}
+	p.setOfElementsWithoutAttrs["s"] = struct{}{}
+	p.setOfElementsWithoutAttrs["samp"] = struct{}{}
+	p.setOfElementsWithoutAttrs["section"] = struct{}{}
+	p.setOfElementsWithoutAttrs["select"] = struct{}{}
+	p.setOfElementsWithoutAttrs["small"] = struct{}{}
+	p.setOfElementsWithoutAttrs["span"] = struct{}{}
+	p.setOfElementsWithoutAttrs["strike"] = struct{}{}
+	p.setOfElementsWithoutAttrs["strong"] = struct{}{}
+	p.setOfElementsWithoutAttrs["style"] = struct{}{}
+	p.setOfElementsWithoutAttrs["sub"] = struct{}{}
+	p.setOfElementsWithoutAttrs["summary"] = struct{}{}
+	p.setOfElementsWithoutAttrs["sup"] = struct{}{}
+	p.setOfElementsWithoutAttrs["svg"] = struct{}{}
+	p.setOfElementsWithoutAttrs["table"] = struct{}{}
+	p.setOfElementsWithoutAttrs["tbody"] = struct{}{}
+	p.setOfElementsWithoutAttrs["td"] = struct{}{}
+	p.setOfElementsWithoutAttrs["textarea"] = struct{}{}
+	p.setOfElementsWithoutAttrs["tfoot"] = struct{}{}
+	p.setOfElementsWithoutAttrs["th"] = struct{}{}
+	p.setOfElementsWithoutAttrs["thead"] = struct{}{}
+	p.setOfElementsWithoutAttrs["time"] = struct{}{}
+	p.setOfElementsWithoutAttrs["tr"] = struct{}{}
+	p.setOfElementsWithoutAttrs["tt"] = struct{}{}
+	p.setOfElementsWithoutAttrs["u"] = struct{}{}
+	p.setOfElementsWithoutAttrs["ul"] = struct{}{}
+	p.setOfElementsWithoutAttrs["var"] = struct{}{}
+	p.setOfElementsWithoutAttrs["video"] = struct{}{}
+	p.setOfElementsWithoutAttrs["wbr"] = struct{}{}
 
 }
 
@@ -381,15 +371,15 @@ func (p *Policy) addDefaultElsWithoutAttrs() {
 func (p *Policy) addDefaultSkipElementContent() {
 	p.init()
 
-	p.skipElemContent["frame"] = true
-	p.skipElemContent["frameset"] = true
-	p.skipElemContent["iframe"] = true
-	p.skipElemContent["noembed"] = true
-	p.skipElemContent["noframes"] = true
-	p.skipElemContent["noscript"] = true
-	p.skipElemContent["nostyle"] = true
-	p.skipElemContent["object"] = true
-	p.skipElemContent["script"] = true
-	p.skipElemContent["style"] = true
-	p.skipElemContent["title"] = true
+	p.setOfElementsToSkipContent["frame"] = struct{}{}
+	p.setOfElementsToSkipContent["frameset"] = struct{}{}
+	p.setOfElementsToSkipContent["iframe"] = struct{}{}
+	p.setOfElementsToSkipContent["noembed"] = struct{}{}
+	p.setOfElementsToSkipContent["noframes"] = struct{}{}
+	p.setOfElementsToSkipContent["noscript"] = struct{}{}
+	p.setOfElementsToSkipContent["nostyle"] = struct{}{}
+	p.setOfElementsToSkipContent["object"] = struct{}{}
+	p.setOfElementsToSkipContent["script"] = struct{}{}
+	p.setOfElementsToSkipContent["style"] = struct{}{}
+	p.setOfElementsToSkipContent["title"] = struct{}{}
 }

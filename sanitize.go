@@ -90,7 +90,7 @@ func (p *Policy) Sanitize(s string) string {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if p.skipElemContent[token.Data] {
+				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
 					skipElementContent = true
 				}
 				break
@@ -117,7 +117,7 @@ func (p *Policy) Sanitize(s string) string {
 			}
 
 			if _, ok := p.elsAndAttrs[token.Data]; !ok {
-				if p.skipElemContent[token.Data] {
+				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
 					skipElementContent = false
 				}
 				break
@@ -294,7 +294,8 @@ func (p *Policy) sanitizeAttrs(
 }
 
 func (p *Policy) allowNoAttrs(elementName string) bool {
-	return p.elsWithoutAttrs[elementName]
+	_, ok := p.setOfElementsWithoutAttrs[elementName]
+	return ok
 }
 
 func (p *Policy) validURL(rawurl string) (string, bool) {
@@ -312,7 +313,7 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 		}
 
 		if u.Scheme != "" {
-			if p.urlSchemes[u.Scheme] {
+			if _, ok := p.setOfUrlSchemes[u.Scheme]; ok {
 				return u.String(), true
 			}
 
