@@ -30,6 +30,7 @@
 package bluemonday
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -64,7 +65,10 @@ type Policy struct {
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
 
-	setOfUrlSchemes            map[string]struct{}
+	// If urlPolicy is nil, all URLs with matching schema are allowed.
+	// Otherwise, only the URLs with matching schema and urlPolicy(url) returning true are allowed.
+	allowUrlSchemes map[string]urlPolicy
+
 	setOfElementsWithoutAttrs  map[string]struct{}
 	setOfElementsToSkipContent map[string]struct{}
 }
@@ -83,12 +87,14 @@ type attrPolicyBuilder struct {
 	regexp    *regexp.Regexp
 }
 
+type urlPolicy func(url *url.URL) (allowUrl bool)
+
 // init initializes the maps if this has not been done already
 func (p *Policy) init() {
 	if !p.initialized {
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
-		p.setOfUrlSchemes = make(map[string]struct{})
+		p.allowUrlSchemes = make(map[string]urlPolicy)
 		p.setOfElementsWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
 		p.initialized = true
@@ -236,7 +242,7 @@ func (p *Policy) AllowRelativeURLs(require bool) *Policy {
 	return p
 }
 
-// AllowURLSchemes will append URL schems to the whitelist
+// AllowURLSchemes will append URL schemes to the whitelist
 // Example: p.AllowURLSchemes("mailto", "http", "https")
 func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 	p.init()
@@ -246,10 +252,25 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 	for _, scheme := range schemes {
 		scheme = strings.ToLower(scheme)
 
-		if _, ok := p.setOfUrlSchemes[scheme]; !ok {
-			p.setOfUrlSchemes[scheme] = struct{}{}
-		}
+		// Allow all URLs with matching scheme.
+		p.allowUrlSchemes[scheme] = nil
 	}
+
+	return p
+}
+
+// AllowURLSchemeWithCustomPolicy will append URL schemes with
+// a custom URL policy to the whitelist.
+// Only the URLs with matching schema and urlPolicy(url)
+// returning true will be allowed.
+func (p *Policy) AllowURLSchemeWithCustomPolicy(scheme string, urlPolicy func(url *url.URL) (allowUrl bool)) *Policy {
+	p.init()
+
+	p.RequireParseableURLs(true)
+
+	scheme = strings.ToLower(scheme)
+
+	p.allowUrlSchemes[scheme] = urlPolicy
 
 	return p
 }
