@@ -66,8 +66,9 @@ type Policy struct {
 	globalAttrs map[string]attrPolicy
 
 	// If urlPolicy is nil, all URLs with matching schema are allowed.
-	// Otherwise, only the URLs with matching schema and urlPolicy(url) returning true are allowed.
-	allowUrlSchemes map[string]urlPolicy
+	// Otherwise, only the URLs with matching schema and urlPolicy(url)
+	// returning true are allowed.
+	allowURLSchemes map[string]urlPolicy
 
 	setOfElementsWithoutAttrs  map[string]struct{}
 	setOfElementsToSkipContent map[string]struct{}
@@ -94,7 +95,7 @@ func (p *Policy) init() {
 	if !p.initialized {
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
-		p.allowUrlSchemes = make(map[string]urlPolicy)
+		p.allowURLSchemes = make(map[string]urlPolicy)
 		p.setOfElementsWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
 		p.initialized = true
@@ -253,7 +254,7 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 		scheme = strings.ToLower(scheme)
 
 		// Allow all URLs with matching scheme.
-		p.allowUrlSchemes[scheme] = nil
+		p.allowURLSchemes[scheme] = nil
 	}
 
 	return p
@@ -263,14 +264,18 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 // a custom URL policy to the whitelist.
 // Only the URLs with matching schema and urlPolicy(url)
 // returning true will be allowed.
-func (p *Policy) AllowURLSchemeWithCustomPolicy(scheme string, urlPolicy func(url *url.URL) (allowUrl bool)) *Policy {
+func (p *Policy) AllowURLSchemeWithCustomPolicy(
+	scheme string,
+	urlPolicy func(url *url.URL) (allowUrl bool),
+) *Policy {
+
 	p.init()
 
 	p.RequireParseableURLs(true)
 
 	scheme = strings.ToLower(scheme)
 
-	p.allowUrlSchemes[scheme] = urlPolicy
+	p.allowURLSchemes[scheme] = urlPolicy
 
 	return p
 }

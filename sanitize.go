@@ -313,7 +313,14 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 		}
 
 		if u.Scheme != "" {
-			if urlPolicy, ok := p.allowUrlSchemes[u.Scheme]; ok && (urlPolicy == nil || urlPolicy(u) == true) {
+
+			urlPolicy, ok := p.allowURLSchemes[u.Scheme]
+			if !ok {
+				return "", false
+
+			}
+
+			if urlPolicy == nil || urlPolicy(u) == true {
 				return u.String(), true
 			}
 

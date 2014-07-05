@@ -22,8 +22,6 @@ all: clean fmt vet test install
 fmt:
 	@gofmt -w ./$*
 
-build: export GOOS=linux
-build: export GOARCH=amd64
 build: clean
 	@go build
 

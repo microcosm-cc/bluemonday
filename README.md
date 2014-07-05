@@ -312,13 +312,13 @@ Gophers can use their familiar tools:
 
 `go test`
 
-I personally use a Makefile as it spares typing the same args over and over.
+I personally use a Makefile as it spares typing the same args over and over whilst providing consistency for those of us who jump from language to language and enjoy just typing `make` in a project directory and watch magic happen.
 
-`make` will build (for 64-bit linux), test and install the library.
+`make` will build, vet, test and install the library.
 
 `make clean` will remove the library from a *single* `${GOPATH}/pkg` directory tree
 
-`make test` will run the tests with a coverage report
+`make test` will run the tests
 
 `make cover` will run the tests and *open a browser window* with the coverage report
 
