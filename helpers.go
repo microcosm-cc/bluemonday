@@ -174,7 +174,8 @@ func (p *Policy) AllowStyling() {
 }
 
 // AllowImages enables the img element and some popular attributes. It will also
-// ensure that URL values are parseable
+// ensure that URL values are parseable. This helper does not enable data URI
+// images, for that you should also use the AllowDataURIImages() helper.
 func (p *Policy) AllowImages() {
 
 	// "img" is permitted
@@ -182,8 +183,7 @@ func (p *Policy) AllowImages() {
 	p.AllowAttrs("alt").Matching(Paragraph).OnElements("img")
 	p.AllowAttrs("height", "width").Matching(NumberOrPercent).OnElements("img")
 
-	// Standard URLs enabled, which disables data URI images as the data scheme
-	// isn't included in the policy
+	// Standard URLs enabled
 	p.AllowStandardURLs()
 	p.AllowAttrs("src").OnElements("img")
 }
