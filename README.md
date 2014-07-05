@@ -98,6 +98,15 @@ func main() {
 }
 ```
 
+We offer three ways to call Sanitize:
+```go
+p.Sanitize(string) string
+p.SanitizeBytes([]byte) []byte
+p.SanitizeReader(io.Reader) bytes.Buffer
+```
+
+If you are obsessed about performance, `p.SanitizeReader(r).Bytes()` will return a `[]byte` without performing any unnecessary casting of the inputs or outputs. Though the difference is so negligible you should never need to care.
+
 You can build your own policies:
 ```go
 package main

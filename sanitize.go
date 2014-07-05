@@ -40,6 +40,7 @@ import (
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
 // the given policy whitelist.
+//
 // It returns a HTML string that has been sanitized by the policy or an empty
 // string if an error has occurred (most likely as a consequence of extremely
 // malformed input)
@@ -49,6 +50,35 @@ func (p *Policy) Sanitize(s string) string {
 		return ""
 	}
 
+	return p.sanitize(strings.NewReader(s)).String()
+}
+
+// SanitizeBytes takes a []byte that contains a HTML fragment or document and applies
+// the given policy whitelist.
+//
+// It returns a []byte containing the HTML that has been sanitized by the policy
+// or an empty []byte if an error has occurred (most likely as a consequence of
+// extremely malformed input)
+func (p *Policy) SanitizeBytes(b []byte) []byte {
+	if len(b) == 0 {
+		return b
+	}
+
+	return p.sanitize(bytes.NewReader(b)).Bytes()
+}
+
+// SanitizeReader takes an io.Reader that contains a HTML fragment or document
+// and applies the given policy whitelist.
+//
+// It returns a bytes.Buffer containing the HTML that has been sanitized by the
+// policy. Errors during sanitization will merely return an empty result.
+func (p *Policy) SanitizeReader(r io.Reader) *bytes.Buffer {
+	return p.sanitize(r)
+}
+
+// Performs the actual sanitization process.
+func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
+
 	// It is possible that the developer has created the policy via:
 	//   p := bluemonday.Policy{}
 	// rather than:
@@ -57,8 +87,8 @@ func (p *Policy) Sanitize(s string) string {
 	// would initiliaze the maps, then we need to do that.
 	p.init()
 
-	var cleanHTML bytes.Buffer
-	tokenizer := html.NewTokenizer(strings.NewReader(s))
+	var buff bytes.Buffer
+	tokenizer := html.NewTokenizer(r)
 
 	skipElementContent := false
 	skipClosingTag := false
@@ -67,11 +97,11 @@ func (p *Policy) Sanitize(s string) string {
 			err := tokenizer.Err()
 			if err == io.EOF {
 				// End of input means end of processing
-				return cleanHTML.String()
+				return &buff
 			}
 
 			// Raw tokenizer error
-			return ""
+			return &bytes.Buffer{}
 		}
 
 		token := tokenizer.Token()
@@ -79,7 +109,7 @@ func (p *Policy) Sanitize(s string) string {
 		case html.DoctypeToken:
 
 			if p.allowDocType {
-				cleanHTML.WriteString(token.String())
+				buff.WriteString(token.String())
 			}
 
 		case html.CommentToken:
@@ -107,7 +137,7 @@ func (p *Policy) Sanitize(s string) string {
 				}
 			}
 
-			cleanHTML.WriteString(token.String())
+			buff.WriteString(token.String())
 
 		case html.EndTagToken:
 
@@ -123,7 +153,7 @@ func (p *Policy) Sanitize(s string) string {
 				break
 			}
 
-			cleanHTML.WriteString(token.String())
+			buff.WriteString(token.String())
 
 		case html.SelfClosingTagToken:
 
@@ -140,17 +170,17 @@ func (p *Policy) Sanitize(s string) string {
 				break
 			}
 
-			cleanHTML.WriteString(token.String())
+			buff.WriteString(token.String())
 
 		case html.TextToken:
 
 			if !skipElementContent {
-				cleanHTML.WriteString(token.String())
+				buff.WriteString(token.String())
 			}
 
 		default:
 			// A token that didn't exist in the html package when we wrote this
-			return ""
+			return &bytes.Buffer{}
 		}
 	}
 }

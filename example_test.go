@@ -32,6 +32,7 @@ package bluemonday_test
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -210,4 +211,45 @@ func ExamplePolicy_AllowElements() {
 
 	// Allow styling elements without attributes
 	p.AllowElements("br", "div", "hr", "p", "span")
+}
+
+func ExamplePolicy_Sanitize() {
+	// UGCPolicy is a convenience policy for user generated content.
+	p := bluemonday.UGCPolicy()
+
+	// string in, string out
+	html := p.Sanitize(`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`)
+
+	fmt.Println(html)
+
+	// Output:
+	//<a href="http://www.google.com" rel="nofollow">Google</a>
+}
+
+func ExamplePolicy_SanitizeBytes() {
+	// UGCPolicy is a convenience policy for user generated content.
+	p := bluemonday.UGCPolicy()
+
+	// []byte in, []byte out
+	b := []byte(`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`)
+	b = p.SanitizeBytes(b)
+
+	fmt.Println(string(b))
+
+	// Output:
+	//<a href="http://www.google.com" rel="nofollow">Google</a>
+}
+
+func ExamplePolicy_SanitizeReader() {
+	// UGCPolicy is a convenience policy for user generated content.
+	p := bluemonday.UGCPolicy()
+
+	// io.Reader in, bytes.Buffer out
+	r := strings.NewReader(`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`)
+	buf := p.SanitizeReader(r)
+
+	fmt.Println(buf.String())
+
+	// Output:
+	//<a href="http://www.google.com" rel="nofollow">Google</a>
 }
