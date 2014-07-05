@@ -40,8 +40,8 @@ We haven't gone for the formal "Sign a Contributor Licence Agreement" thing that
 
 But we do need to know that we can accept and merge your contributions, so for now the act of contributing a pull request should be considered equivalent to agreeing to a contributor licence agreement, specifically:
 
-You accept that the act of submitting code to the bluemonday project is to grant a copyright licence the project that is perpetual, worldwide, non-exclusive, no-charge, royalty free and irrevocable.
+You accept that the act of submitting code to the bluemonday project is to grant a copyright licence to the project that is perpetual, worldwide, non-exclusive, no-charge, royalty free and irrevocable.
 
-You accept that all who comply with the licence of the project (BSD 3-clause) are permitted to use your contributions inline with the BSD licence.
+You accept that all who comply with the licence of the project (BSD 3-clause) are permitted to use your contributions to the project.
 
-You accept, and by submitting code do declare, that you have the legal entitlement to grant such a licence to the project and that each of the contributions is your own original creation.
+You accept, and by submitting code do declare, that you have the legal right to grant such a licence to the project and that each of the contributions is your own original creation.
