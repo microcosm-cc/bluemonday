@@ -30,6 +30,7 @@
 package bluemonday
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -320,8 +321,9 @@ func TestRegexpVars(t *testing.T) {
 
 func TestAllowDataURIImages(t *testing.T) {
 
-	p := UGCPolicy()
+	p := NewPolicy()
 	p.AllowDataURIImages()
+	p.AllowImages()
 
 	type test struct {
 		in       string
@@ -359,16 +361,22 @@ func TestAllowDataURIImages(t *testing.T) {
 		},
 	}
 
-	for ii, test := range tests {
-		out := p.Sanitize(test.in)
-		if out != test.expected {
-			t.Errorf(
-				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-				ii,
-				test.in,
-				out,
-				test.expected,
-			)
-		}
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
 	}
+	wg.Wait()
 }

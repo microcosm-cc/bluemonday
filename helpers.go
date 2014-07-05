@@ -110,6 +110,15 @@ var (
 	// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes#attr-title
 	// Note that we are not allowing chars that could close tags like '>'
 	Paragraph = regexp.MustCompile(`^[\p{L}\p{N}\s\-_',\[\]!\./\\\(\)]*$`)
+
+	// dataURIImagePrefix is used by AllowDataURIImages to define the acceptable
+	// prefix of data URIs that contain common web image formats.
+	//
+	// This is not exported as it's not useful by itself, and only has value
+	// within the AllowDataURIImages func
+	dataURIImagePrefix = regexp.MustCompile(
+		`^image/(gif|jpeg|png|webp);base64,`,
+	)
 )
 
 // AllowStandardURLs is a convenience function that will enable rel="nofollow"
@@ -198,9 +207,6 @@ func (p *Policy) AllowDataURIImages() {
 	// URLs must be parseable by net/url.Parse()
 	p.RequireParseableURLs(true)
 
-	// !url.IsAbs() is permitted
-	p.AllowRelativeURLs(true)
-
 	// Supply a function to validate images contained within data URI
 	p.AllowURLSchemeWithCustomPolicy(
 		"data",
@@ -209,9 +215,6 @@ func (p *Policy) AllowDataURIImages() {
 				return false
 			}
 
-			dataURIImagePrefix := regexp.MustCompile(
-				`^image/(gif|jpeg|png|webp);base64,`,
-			)
 			matched := dataURIImagePrefix.FindString(url.Opaque)
 			if matched == "" {
 				return false
