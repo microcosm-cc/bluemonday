@@ -54,9 +54,27 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestSignatureBehaviour(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/8
 	p := UGCPolicy()
 
 	input := "Hi.\n"
+
+	if output := p.Sanitize(input); output != input {
+		t.Errorf(`Sanitize() input = %s, output = %s`, input, output)
+	}
+
+	if output := string(p.SanitizeBytes([]byte(input))); output != input {
+		t.Errorf(`SanitizeBytes() input = %s, output = %s`, input, output)
+	}
+
+	if output := p.SanitizeReader(
+		strings.NewReader(input),
+	).String(); output != input {
+
+		t.Errorf(`SanitizeReader() input = %s, output = %s`, input, output)
+	}
+
+	input = "\t\n \n\t"
 
 	if output := p.Sanitize(input); output != input {
 		t.Errorf(`Sanitize() input = %s, output = %s`, input, output)

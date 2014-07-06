@@ -59,7 +59,7 @@ func (p *Policy) Sanitize(s string) string {
 // or an empty []byte if an error has occurred (most likely as a consequence of
 // extremely malformed input)
 func (p *Policy) SanitizeBytes(b []byte) []byte {
-	if len(b) == 0 {
+	if len(bytes.TrimSpace(b)) == 0 {
 		return b
 	}
 

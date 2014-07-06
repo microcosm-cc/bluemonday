@@ -84,6 +84,7 @@ func StripTagsPolicy() *Policy {
 // providing a policy to sanitise HTML5 documents safely but with the
 // least intrusion on the formatting expectations of the user.
 func UGCPolicy() *Policy {
+
 	p := NewPolicy()
 
 	///////////////////////
