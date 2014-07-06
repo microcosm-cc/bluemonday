@@ -52,11 +52,6 @@ func TestStrictPolicy(t *testing.T) {
 
 func TestStripTagsPolicy(t *testing.T) {
 
-	type test struct {
-		in       string
-		expected string
-	}
-
 	tests := []test{
 		test{
 			in:       "Hello, <b>World</b>!",
@@ -89,11 +84,6 @@ func TestStripTagsPolicy(t *testing.T) {
 }
 
 func TestUGCPolicy(t *testing.T) {
-
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		// Simple formatting
@@ -205,7 +195,7 @@ func TestUGCPolicy(t *testing.T) {
 		// OWASP 25 June 2014 09:15 Strange behaviour
 		test{
 			in:       "<table>Hallo\r\n<script>SCRIPT</script>\nEnde\n\r",
-			expected: "<table>Hallo\n\nEnde",
+			expected: "<table>Hallo\n\nEnde\n\n",
 		},
 	}
 

@@ -45,9 +45,8 @@ import (
 // string if an error has occurred (most likely as a consequence of extremely
 // malformed input)
 func (p *Policy) Sanitize(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return ""
+	if strings.TrimSpace(s) == "" {
+		return s
 	}
 
 	return p.sanitize(strings.NewReader(s)).String()

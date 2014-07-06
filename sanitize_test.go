@@ -38,11 +38,39 @@ import (
 	"testing"
 )
 
+// test is a simple input vs output struct used to construct a slice of many
+// tests to run within a single test method.
+type test struct {
+	in       string
+	expected string
+}
+
 func TestEmpty(t *testing.T) {
 	p := StrictPolicy()
 
 	if "" != p.Sanitize(``) {
 		t.Error("Empty string is not empty")
+	}
+}
+
+func TestSignatureBehaviour(t *testing.T) {
+	p := UGCPolicy()
+
+	input := "Hi.\n"
+
+	if output := p.Sanitize(input); output != input {
+		t.Errorf(`Sanitize() input = %s, output = %s`, input, output)
+	}
+
+	if output := string(p.SanitizeBytes([]byte(input))); output != input {
+		t.Errorf(`SanitizeBytes() input = %s, output = %s`, input, output)
+	}
+
+	if output := p.SanitizeReader(
+		strings.NewReader(input),
+	).String(); output != input {
+
+		t.Errorf(`SanitizeReader() input = %s, output = %s`, input, output)
 	}
 }
 
@@ -80,10 +108,6 @@ func TestAllowDocType(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		test{
@@ -158,10 +182,6 @@ func TestLinks(t *testing.T) {
 }
 
 func TestStyling(t *testing.T) {
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		test{
@@ -204,11 +224,6 @@ func TestEmptyAttributes(t *testing.T) {
 	p := UGCPolicy()
 	// Do not do this, especially without a Matching() clause, this is a test
 	p.AllowAttrs("disabled").OnElements("textarea")
-
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		// Empty elements
@@ -271,11 +286,6 @@ func TestDataUri(t *testing.T) {
 		},
 	)
 
-	type test struct {
-		in       string
-		expected string
-	}
-
 	tests := []test{
 		test{
 			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==">`,
@@ -327,11 +337,6 @@ func TestAntiSamy(t *testing.T) {
 	p.AllowAttrs("char").Matching(
 		regexp.MustCompile(`p{L}`), // Single character or HTML entity only
 	).OnElements("td")
-
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		// Base64 strings
@@ -685,11 +690,6 @@ func TestAntiSamy(t *testing.T) {
 func TestXSS(t *testing.T) {
 
 	p := UGCPolicy()
-
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		test{
@@ -1061,11 +1061,6 @@ func TestIssue3(t *testing.T) {
 
 	p := UGCPolicy()
 	p.AllowStyling()
-
-	type test struct {
-		in       string
-		expected string
-	}
 
 	tests := []test{
 		test{
