@@ -34,46 +34,14 @@ import (
 )
 
 // StrictPolicy returns an empty policy, which will effectively strip all HTML
-// elements and their attributes from a document including the content between
-// those elements.
+// elements and their attributes from a document.
 func StrictPolicy() *Policy {
 	return NewPolicy()
 }
 
-// StripTagsPolicy returns a policy that will strip HTML elements from text
-// whilst retaining the textual content between the start and end tag of the
-// elements.
+// StripTagsPolicy is DEPRECATED. Use StrictPolicy instead.
 func StripTagsPolicy() *Policy {
-
-	// This policy works by taking advantage of an empty internal whitelist of
-	// elements that are permitted to exist without attributes.
-	//
-	// We start by building a policy from the struct so that we avoid filling
-	// the internal sans-attribute elements whitelist
-	p := Policy{}
-
-	// Then we allow a wide range of elements that cover most content. These are
-	// all elements that we will trust the textual content of, note that we are
-	// not include "script", "style" and elements that would contain code.
-	// The code would be safe, but for the purpose of a strip tags the intended
-	// usage scenario is for things like title text on blog posts where text is
-	// fine and should be preserved but markup and script is not fine.
-	p.AllowElements("a", "abbr", "acronym", "area", "b", "bdi", "bdo",
-		"blockquote", "br", "caption", "cite", "code", "col", "colgroup", "dd",
-		"del", "details", "dfn", "div", "dl", "dt", "em", "figcaption",
-		"figure", "h1", "h2", "h3", "h4", "h5", "h6", "hgroup", "hr", "i",
-		"img", "ins", "li", "mark", "meter", "ol", "p", "pre", "progress", "q",
-		"rp", "rt", "ruby", "s", "samp", "section", "small", "span", "strike",
-		"strong", "sub", "summary", "sup", "table", "tbody", "td", "tfoot",
-		"th", "thead", "time", "tr", "tt", "u", "ul", "var", "wbr")
-
-	// That's it. By matching those elements, but not finding any attributes
-	// whitelist, it will strip attributes, and then... as none of the elements
-	// are permitted without attributes it will strip the element. As the
-	// element was actually on a whitelist, it preserves the contents of the
-	// element.
-
-	return &p
+	return StrictPolicy()
 }
 
 // UGCPolicy returns a policy aimed at user generated content that is a result

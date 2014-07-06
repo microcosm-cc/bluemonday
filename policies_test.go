@@ -37,21 +37,6 @@ func TestStrictPolicy(t *testing.T) {
 
 	p := StrictPolicy()
 
-	in := "Hello, <b>World</b>!"
-	expected := "Hello, World!"
-	out := p.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-}
-
-func TestStripTagsPolicy(t *testing.T) {
-
 	tests := []test{
 		test{
 			in:       "Hello, <b>World</b>!",
@@ -65,9 +50,8 @@ func TestStripTagsPolicy(t *testing.T) {
 			in:       `<quietly>email me - addy in profile</quiet>`,
 			expected: `email me - addy in profile`,
 		},
+		test{},
 	}
-
-	p := StripTagsPolicy()
 
 	for ii, test := range tests {
 		out := p.Sanitize(test.in)

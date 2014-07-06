@@ -160,21 +160,6 @@ func ExampleStrictPolicy() {
 	//Goodbye Cruel World
 }
 
-func ExampleStripTagsPolicy() {
-	// StrictPolicy is equivalent to NewPolicy and as nothing else is declared
-	// we are stripping all elements (and their attributes)
-	p := bluemonday.StripTagsPolicy()
-
-	html := p.Sanitize(
-		`Goodbye <a onblur="alert(secret)" href="http://en.wikipedia.org/wiki/Goodbye_Cruel_World_(Pink_Floyd_song)">Cruel</a> World`,
-	)
-
-	fmt.Println(html)
-
-	// Output:
-	//Goodbye Cruel World
-}
-
 func ExampleUGCPolicy() {
 	// UGCPolicy is a convenience policy for user generated content.
 	p := bluemonday.UGCPolicy()
