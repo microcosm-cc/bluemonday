@@ -271,49 +271,91 @@ func (p *Policy) sanitizeAttrs(
 		cleanAttrs = tmpAttrs
 	}
 
-	if linkable(elementName) && p.requireNoFollow && len(cleanAttrs) > 0 {
+	if linkable(elementName) &&
+		(p.requireNoFollow ||
+			p.requireNoFollowFullyQualifiedLinks ||
+			p.addTargetBlankToFullyQualifiedLinks) &&
+		len(cleanAttrs) > 0 {
+
 		// Add rel="nofollow" if a "href" exists
 		switch elementName {
 		case "a", "area", "link":
 			var hrefFound bool
+			var externalLink bool
 			for _, htmlAttr := range cleanAttrs {
 				if htmlAttr.Key == "href" {
 					hrefFound = true
+
+					u, err := url.Parse(htmlAttr.Val)
+					if err != nil {
+						continue
+					}
+					if u.Host != "" {
+						externalLink = true
+					}
+
 					continue
 				}
 			}
 
 			if hrefFound {
 				tmpAttrs := []html.Attribute{}
-				var relFound bool
 				var noFollowFound bool
+				var targetFound bool
+
+				addNoFollow := (p.requireNoFollow ||
+					externalLink && p.requireNoFollowFullyQualifiedLinks)
+				addTargetBlank := (externalLink &&
+					p.addTargetBlankToFullyQualifiedLinks)
+
 				for _, htmlAttr := range cleanAttrs {
-					if htmlAttr.Key == "rel" {
-						relFound = true
+
+					if htmlAttr.Key == "rel" &&
+						addNoFollow {
+
 						if strings.Contains(htmlAttr.Val, "nofollow") {
 							noFollowFound = true
-							continue
+						} else {
+							htmlAttr.Val += " nofollow"
+							noFollowFound = true
+							tmpAttrs = append(tmpAttrs, htmlAttr)
 						}
-
-						htmlAttr.Val += " nofollow"
-						tmpAttrs = append(tmpAttrs, htmlAttr)
 					} else {
+						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
 
+					if elementName == "a" &&
+						htmlAttr.Key == "target" &&
+						addTargetBlank {
+
+						if strings.Contains(htmlAttr.Val, "_blank") {
+							targetFound = true
+						} else {
+							htmlAttr.Val = "_blank"
+							targetFound = true
+							tmpAttrs = append(tmpAttrs, htmlAttr)
+						}
+					} else {
 						tmpAttrs = append(tmpAttrs, htmlAttr)
 					}
 				}
-				if noFollowFound {
-					break
-				}
-				if relFound {
+				if noFollowFound || targetFound {
 					cleanAttrs = tmpAttrs
-					break
 				}
 
-				rel := html.Attribute{}
-				rel.Key = "rel"
-				rel.Val = "nofollow"
-				cleanAttrs = append(cleanAttrs, rel)
+				if addNoFollow && !noFollowFound {
+					rel := html.Attribute{}
+					rel.Key = "rel"
+					rel.Val = "nofollow"
+					cleanAttrs = append(cleanAttrs, rel)
+				}
+
+				if element == "a" && addTargetBlank && !targetFound {
+					rel := html.Attribute{}
+					rel.Key = "target"
+					rel.Val = "_blank"
+					cleanAttrs = append(cleanAttrs, rel)
+				}
 			}
 		default:
 		}

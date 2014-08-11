@@ -53,6 +53,16 @@ type Policy struct {
 	// When true, add rel="nofollow" to HTML anchors
 	requireNoFollow bool
 
+	// When true, add rel="nofollow" to HTML anchors
+	// Will add for href="http://foo"
+	// Will skip for href="/foo" or href="foo"
+	requireNoFollowFullyQualifiedLinks bool
+
+	// When true add target="_blank" to fully qualified links
+	// Will add for href="http://foo"
+	// Will skip for href="/foo" or href="foo"
+	addTargetBlankToFullyQualifiedLinks bool
+
 	// When true, URLs must be parseable by "net/url" url.Parse()
 	requireParseableURLs bool
 
@@ -212,6 +222,32 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
 
 	p.requireNoFollow = require
+
+	return p
+}
+
+// RequireNoFollowOnFullyQualifiedLinks will result in all <a> tags that point
+// to a non-local destination (i.e. starts with a protocol and has a host)
+// having a rel="nofollow" added to them if one does not already exist
+//
+// Note: This requires p.RequireParseableURLs(true) and will enable it.
+func (p *Policy) RequireNoFollowOnFullyQualifiedLinks(require bool) *Policy {
+
+	p.requireNoFollowFullyQualifiedLinks = require
+	p.requireParseableURLs = true
+
+	return p
+}
+
+// AddTargetBlankToFullyQualifiedLinks will result in all <a> tags that point
+// to a non-local destination (i.e. starts with a protocol and has a host)
+// having a target="_blank" added to them if one does not already exist
+//
+// Note: This requires p.RequireParseableURLs(true) and will enable it.
+func (p *Policy) AddTargetBlankToFullyQualifiedLinks(require bool) *Policy {
+
+	p.addTargetBlankToFullyQualifiedLinks = require
+	p.requireParseableURLs = true
 
 	return p
 }

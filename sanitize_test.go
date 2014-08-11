@@ -199,6 +199,83 @@ func TestLinks(t *testing.T) {
 	wg.Wait()
 }
 
+func TestLinkTargets(t *testing.T) {
+
+	tests := []test{
+		test{
+			in:       `<a href="http://www.google.com">`,
+			expected: `<a href="http://www.google.com" rel="nofollow" target="_blank">`,
+		},
+		test{
+			in:       `<a href="//www.google.com">`,
+			expected: `<a href="//www.google.com" rel="nofollow" target="_blank">`,
+		},
+		test{
+			in:       `<a href="/www.google.com">`,
+			expected: `<a href="/www.google.com">`,
+		},
+		test{
+			in:       `<a href="www.google.com">`,
+			expected: `<a href="www.google.com">`,
+		},
+		test{
+			in:       `<a href="javascript:alert(1)">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="#">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="#top">`,
+			expected: `<a href="#top">`,
+		},
+		test{
+			in:       `<a href="?">`,
+			expected: ``,
+		},
+		test{
+			in:       `<a href="?q=1">`,
+			expected: `<a href="?q=1">`,
+		},
+		test{
+			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==" alt="Red dot" />`,
+			expected: `<img alt="Red dot"/>`,
+		},
+		test{
+			in:       `<img src="giraffe.gif" />`,
+			expected: `<img src="giraffe.gif"/>`,
+		},
+	}
+
+	p := UGCPolicy()
+	p.RequireParseableURLs(true)
+	p.RequireNoFollowOnLinks(false)
+	p.RequireNoFollowOnFullyQualifiedLinks(true)
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
 func TestStyling(t *testing.T) {
 
 	tests := []test{
