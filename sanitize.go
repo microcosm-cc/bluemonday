@@ -350,7 +350,7 @@ func (p *Policy) sanitizeAttrs(
 					cleanAttrs = append(cleanAttrs, rel)
 				}
 
-				if element == "a" && addTargetBlank && !targetFound {
+				if elementName == "a" && addTargetBlank && !targetFound {
 					rel := html.Attribute{}
 					rel.Key = "target"
 					rel.Val = "_blank"
