@@ -219,9 +219,12 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 
 // RequireNoFollowOnLinks will result in all <a> tags having a rel="nofollow"
 // added to them if one does not already exist
+//
+// Note: This requires p.RequireParseableURLs(true) and will enable it.
 func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
 
 	p.requireNoFollow = require
+	p.requireParseableURLs = true
 
 	return p
 }

@@ -197,8 +197,9 @@ func (p *Policy) sanitizeAttrs(
 		return attrs
 	}
 
+	// Builds a new attribute slice based on the whether the attribute has been
+	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
-
 	for _, htmlAttr := range attrs {
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
@@ -225,139 +226,153 @@ func (p *Policy) sanitizeAttrs(
 		}
 	}
 
-	if linkable(elementName) && p.requireParseableURLs {
-		// Ensure URLs are parseable:
-		// - a.href
-		// - area.href
-		// - link.href
-		// - blockquote.cite
-		// - q.cite
-		// - img.src
-		// - script.src
-		tmpAttrs := []html.Attribute{}
-		for _, htmlAttr := range cleanAttrs {
-			switch elementName {
-			case "a", "area", "link":
-				if htmlAttr.Key == "href" {
-					if u, ok := p.validURL(htmlAttr.Val); ok {
-						htmlAttr.Val = u
-						tmpAttrs = append(tmpAttrs, htmlAttr)
-					}
-					break
-				}
-				tmpAttrs = append(tmpAttrs, htmlAttr)
-			case "blockquote", "q":
-				if htmlAttr.Key == "cite" {
-					if u, ok := p.validURL(htmlAttr.Val); ok {
-						htmlAttr.Val = u
-						tmpAttrs = append(tmpAttrs, htmlAttr)
-					}
-					break
-				}
-				tmpAttrs = append(tmpAttrs, htmlAttr)
-			case "img", "script":
-				if htmlAttr.Key == "src" {
-					if u, ok := p.validURL(htmlAttr.Val); ok {
-						htmlAttr.Val = u
-						tmpAttrs = append(tmpAttrs, htmlAttr)
-					}
-					break
-				}
-				tmpAttrs = append(tmpAttrs, htmlAttr)
-			default:
-				tmpAttrs = append(tmpAttrs, htmlAttr)
-			}
-		}
-		cleanAttrs = tmpAttrs
+	if len(cleanAttrs) == 0 {
+		// If nothing was allowed, let's get out of here
+		return cleanAttrs
 	}
+	// cleanAttrs now contains the attributes that are permitted
 
-	if linkable(elementName) &&
-		(p.requireNoFollow ||
+	if linkable(elementName) {
+		if p.requireParseableURLs {
+			// Ensure URLs are parseable:
+			// - a.href
+			// - area.href
+			// - link.href
+			// - blockquote.cite
+			// - q.cite
+			// - img.src
+			// - script.src
+			tmpAttrs := []html.Attribute{}
+			for _, htmlAttr := range cleanAttrs {
+				switch elementName {
+				case "a", "area", "link":
+					if htmlAttr.Key == "href" {
+						if u, ok := p.validURL(htmlAttr.Val); ok {
+							htmlAttr.Val = u
+							tmpAttrs = append(tmpAttrs, htmlAttr)
+						}
+						break
+					}
+					tmpAttrs = append(tmpAttrs, htmlAttr)
+				case "blockquote", "q":
+					if htmlAttr.Key == "cite" {
+						if u, ok := p.validURL(htmlAttr.Val); ok {
+							htmlAttr.Val = u
+							tmpAttrs = append(tmpAttrs, htmlAttr)
+						}
+						break
+					}
+					tmpAttrs = append(tmpAttrs, htmlAttr)
+				case "img", "script":
+					if htmlAttr.Key == "src" {
+						if u, ok := p.validURL(htmlAttr.Val); ok {
+							htmlAttr.Val = u
+							tmpAttrs = append(tmpAttrs, htmlAttr)
+						}
+						break
+					}
+					tmpAttrs = append(tmpAttrs, htmlAttr)
+				default:
+					tmpAttrs = append(tmpAttrs, htmlAttr)
+				}
+			}
+			cleanAttrs = tmpAttrs
+		}
+
+		if (p.requireNoFollow ||
 			p.requireNoFollowFullyQualifiedLinks ||
 			p.addTargetBlankToFullyQualifiedLinks) &&
-		len(cleanAttrs) > 0 {
+			len(cleanAttrs) > 0 {
 
-		// Add rel="nofollow" if a "href" exists
-		switch elementName {
-		case "a", "area", "link":
-			var hrefFound bool
-			var externalLink bool
-			for _, htmlAttr := range cleanAttrs {
-				if htmlAttr.Key == "href" {
-					hrefFound = true
+			// Add rel="nofollow" if a "href" exists
+			switch elementName {
+			case "a", "area", "link":
+				var hrefFound bool
+				var externalLink bool
+				for _, htmlAttr := range cleanAttrs {
+					if htmlAttr.Key == "href" {
+						hrefFound = true
 
-					u, err := url.Parse(htmlAttr.Val)
-					if err != nil {
+						u, err := url.Parse(htmlAttr.Val)
+						if err != nil {
+							continue
+						}
+						if u.Host != "" {
+							externalLink = true
+						}
+
 						continue
 					}
-					if u.Host != "" {
-						externalLink = true
-					}
-
-					continue
 				}
-			}
 
-			if hrefFound {
-				tmpAttrs := []html.Attribute{}
-				var noFollowFound bool
-				var targetFound bool
+				if hrefFound {
+					var noFollowFound bool
+					var targetFound bool
 
-				addNoFollow := (p.requireNoFollow ||
-					externalLink && p.requireNoFollowFullyQualifiedLinks)
-				addTargetBlank := (externalLink &&
-					p.addTargetBlankToFullyQualifiedLinks)
+					addNoFollow := (p.requireNoFollow ||
+						externalLink && p.requireNoFollowFullyQualifiedLinks)
 
-				for _, htmlAttr := range cleanAttrs {
+					addTargetBlank := (externalLink &&
+						p.addTargetBlankToFullyQualifiedLinks)
 
-					if htmlAttr.Key == "rel" &&
-						addNoFollow {
+					tmpAttrs := []html.Attribute{}
+					for _, htmlAttr := range cleanAttrs {
 
-						if strings.Contains(htmlAttr.Val, "nofollow") {
-							noFollowFound = true
-						} else {
-							htmlAttr.Val += " nofollow"
-							noFollowFound = true
+						var appended bool
+						if htmlAttr.Key == "rel" && addNoFollow {
+
+							if strings.Contains(htmlAttr.Val, "nofollow") {
+								noFollowFound = true
+								tmpAttrs = append(tmpAttrs, htmlAttr)
+							} else {
+								htmlAttr.Val += " nofollow"
+								noFollowFound = true
+								tmpAttrs = append(tmpAttrs, htmlAttr)
+							}
+
+							appended = true
+						}
+
+						if elementName == "a" &&
+							htmlAttr.Key == "target" &&
+							addTargetBlank {
+
+							if strings.Contains(htmlAttr.Val, "_blank") {
+								targetFound = true
+								tmpAttrs = append(tmpAttrs, htmlAttr)
+							} else {
+								htmlAttr.Val = "_blank"
+								targetFound = true
+								tmpAttrs = append(tmpAttrs, htmlAttr)
+							}
+
+							appended = true
+						}
+
+						if !appended {
 							tmpAttrs = append(tmpAttrs, htmlAttr)
 						}
-					} else {
-						tmpAttrs = append(tmpAttrs, htmlAttr)
+					}
+					if noFollowFound || targetFound {
+						cleanAttrs = tmpAttrs
 					}
 
-					if elementName == "a" &&
-						htmlAttr.Key == "target" &&
-						addTargetBlank {
+					if addNoFollow && !noFollowFound {
+						rel := html.Attribute{}
+						rel.Key = "rel"
+						rel.Val = "nofollow"
+						cleanAttrs = append(cleanAttrs, rel)
+					}
 
-						if strings.Contains(htmlAttr.Val, "_blank") {
-							targetFound = true
-						} else {
-							htmlAttr.Val = "_blank"
-							targetFound = true
-							tmpAttrs = append(tmpAttrs, htmlAttr)
-						}
-					} else {
-						tmpAttrs = append(tmpAttrs, htmlAttr)
+					if elementName == "a" && addTargetBlank && !targetFound {
+						rel := html.Attribute{}
+						rel.Key = "target"
+						rel.Val = "_blank"
+						cleanAttrs = append(cleanAttrs, rel)
 					}
 				}
-				if noFollowFound || targetFound {
-					cleanAttrs = tmpAttrs
-				}
-
-				if addNoFollow && !noFollowFound {
-					rel := html.Attribute{}
-					rel.Key = "rel"
-					rel.Val = "nofollow"
-					cleanAttrs = append(cleanAttrs, rel)
-				}
-
-				if elementName == "a" && addTargetBlank && !targetFound {
-					rel := html.Attribute{}
-					rel.Key = "target"
-					rel.Val = "_blank"
-					cleanAttrs = append(cleanAttrs, rel)
-				}
+			default:
 			}
-		default:
 		}
 	}
 

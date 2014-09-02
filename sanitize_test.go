@@ -1195,3 +1195,85 @@ func TestIssue3(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestIssue9(t *testing.T) {
+
+	p := UGCPolicy()
+	p.AllowAttrs("class").Matching(SpaceSeparatedTokens).OnElements("div", "span")
+	p.AllowAttrs("class", "name").Matching(SpaceSeparatedTokens).OnElements("a")
+	p.AllowAttrs("rel").Matching(regexp.MustCompile(`^nofollow$`)).OnElements("a")
+	p.AllowAttrs("aria-hidden").Matching(regexp.MustCompile(`^true$`)).OnElements("a")
+	p.AllowDataURIImages()
+
+	tt := test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out := p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" target="namedwindow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+}
