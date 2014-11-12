@@ -35,7 +35,7 @@ import (
 	"net/url"
 	"strings"
 
-	"code.google.com/p/go.net/html"
+	"golang.org/x/net/html"
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies

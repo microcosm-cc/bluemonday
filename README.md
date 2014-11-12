@@ -52,7 +52,7 @@ bluemonday is heavily inspired by both the [OWASP Java HTML Sanitizer](https://c
 
 Whitelist based, you need to either build a policy describing the HTML elements and attributes to permit (and the `regexp` patterns of attributes), or use one of the supplied policies representing good defaults.
 
-The policy containing the whitelist is applied using a fast non-validating, forward only, token-based parser implemented in the [Go net/html library](https://code.google.com/p/go/source/browse/?repo=net#hg%2Fhtml) by the core Go team.
+The policy containing the whitelist is applied using a fast non-validating, forward only, token-based parser implemented in the [Go net/html library](https://godoc.org/golang.org/x/net/html) by the core Go team.
 
 We expect to be supplied with well-formatted HTML (closing elements for every applicable open element, nested correctly) and so we do not focus on repairing badly nested or incomplete HTML. We focus on simply ensuring that whatever elements do exist are described in the policy whitelist and that attributes and links are safe for use on your web page. [GIGO](http://en.wikipedia.org/wiki/Garbage_in,_garbage_out) does apply and if you feed it bad HTML bluemonday is not tasked with figuring out how to make it good again.
 
@@ -60,7 +60,7 @@ We expect to be supplied with well-formatted HTML (closing elements for every ap
 
 bluemonday is regularly tested against Go 1.1, 1.2, 1.3 and tip.
 
-We do not support Go 1.0 as we depend on `code.google.com/p/go.net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
+We do not support Go 1.0 as we depend on `golang.org/x/net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
 
 ## Is it production ready?
 
@@ -123,7 +123,7 @@ func main() {
 	// Require URLs to be parseable by net/url.Parse and either:
 	//   mailto: http:// or https://
 	p.AllowStandardURLs()
-	
+
 	// We only allow <p> and <a href="">
 	p.AllowAttrs("href").OnElements("a")
 	p.AllowElements("p")
@@ -312,7 +312,7 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 If you have cloned this repo you will probably need the dependency:
 
-`go get code.google.com/p/go.net/html`
+`go get golang.org/x/net/html`
 
 Gophers can use their familiar tools:
 
