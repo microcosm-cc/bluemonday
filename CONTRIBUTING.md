@@ -22,7 +22,7 @@ If you are reporting a security flaw, you may expect that we will provide the co
 * Describe the reason for the pull request and if applicable show some example inputs and outputs to demonstrate what the patch does
 * Fork the repository on Github
 * Before submitting the pull request you should
-  1. Include tests for your patch, 1 test should encapsulate the entire patch and should refer to the Github issue 
+  1. Include tests for your patch, 1 test should encapsulate the entire patch and should refer to the Github issue
   1. If you have added new exposed/public functionality, you should ensure it is documented appropriately
   1. If you have added new exposed/public functionality, you should consider demonstrating how to use it within one of the helpers or shipped policies if appropriate or within a test if modifying a helper or policy is not appropriate
   1. Run all of the tests `go test -v ./...` or `make test` and ensure all tests pass

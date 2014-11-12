@@ -7,6 +7,6 @@ go:
   - tip
 
 install:
-  - go get code.google.com/p/go.net/html
+  - go get golang.org/x/net/html
 
 script: go test -v ./...
