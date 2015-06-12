@@ -150,7 +150,7 @@ func UGCPolicy() *Policy {
 	p.AllowAttrs("href").OnElements("area")
 	p.AllowAttrs("rel").Matching(SpaceSeparatedTokens).OnElements("area")
 	p.AllowAttrs("shape").Matching(
-		regexp.MustCompile(`(?i)^default|circle|rect|poly$`),
+		regexp.MustCompile(`(?i)^(default|circle|rect|poly)$`),
 	).OnElements("area")
 
 	// "link" is not permitted
