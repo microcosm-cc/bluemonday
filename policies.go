@@ -92,7 +92,7 @@ func UGCPolicy() *Policy {
 	// be blank or the value "open".
 	p.AllowAttrs(
 		"open",
-	).Matching(regexp.MustCompile(`(?i)^|open$`)).OnElements("details")
+	).Matching(regexp.MustCompile(`(?i)^(|open)$`)).OnElements("details")
 
 	// "fieldset" is not permitted as we are not allowing forms to be created.
 
