@@ -1250,8 +1250,8 @@ func TestIssue9(t *testing.T) {
 	}
 
 	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
 	}
 	out = p.Sanitize(tt.in)
 	if out != tt.expected {
@@ -1264,8 +1264,8 @@ func TestIssue9(t *testing.T) {
 	}
 
 	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" target="namedwindow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/go/blob/master/github_flavored_markdown/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" target="namedwindow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
 	}
 	out = p.Sanitize(tt.in)
 	if out != tt.expected {
