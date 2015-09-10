@@ -374,7 +374,7 @@ func (p *Policy) AllowDocType(allow bool) *Policy {
 
 // SkipElementContent adds the HTML elements whose tags is needed to be removed
 // with it's content.
-func (p *Policy) SkipElementContent(names ...string) *Policy {
+func (p *Policy) SkipElementsContent(names ...string) *Policy {
 
 	p.init()
 
