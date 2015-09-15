@@ -372,7 +372,7 @@ func (p *Policy) AllowDocType(allow bool) *Policy {
 	return p
 }
 
-// SkipElementContent adds the HTML elements whose tags is needed to be removed
+// SkipElementsContent adds the HTML elements whose tags is needed to be removed
 // with it's content.
 func (p *Policy) SkipElementsContent(names ...string) *Policy {
 
