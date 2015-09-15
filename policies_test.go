@@ -29,9 +29,7 @@
 
 package bluemonday
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestStrictPolicy(t *testing.T) {
 

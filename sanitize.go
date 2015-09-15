@@ -91,6 +91,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 	skipElementContent := false
 	skipClosingTag := false
+	var closingTagToSkip string
 	for {
 		if tokenizer.Next() == html.ErrorToken {
 			err := tokenizer.Err()
@@ -132,6 +133,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if len(token.Attr) == 0 {
 				if !p.allowNoAttrs(token.Data) {
 					skipClosingTag = true
+					closingTagToSkip = token.Data
 					break
 				}
 			}
@@ -140,7 +142,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 		case html.EndTagToken:
 
-			if skipClosingTag {
+			if skipClosingTag && closingTagToSkip == token.Data {
 				skipClosingTag = false
 				break
 			}

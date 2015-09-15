@@ -858,7 +858,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		test{
 			in: `<XML ID="xss"><I><B><IMG SRC="javas<!-- -->cript:alert('XSS')"></B></I></XML>
 <SPAN DATASRC="#xss" DATAFLD="B" DATAFORMATAS="HTML"></SPAN>`,
-			expected: `<i><b></i>
+			expected: `<i><b></b></i>
 <span></span>`,
 		},
 		test{
@@ -1093,7 +1093,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		},
 		test{
 			in:       `<IMG """><SCRIPT>alert("XSS")</SCRIPT>">`,
-			expected: ``,
+			expected: `&#34;&gt;`,
 		},
 		test{
 			in:       "<IMG SRC=`javascript:alert(\"RSnake says, 'XSS'\")`>",
@@ -1268,6 +1268,27 @@ func TestIssue9(t *testing.T) {
 		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
 	}
 	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+}
+
+func TestIssue18(t *testing.T) {
+	p := UGCPolicy()
+	//p := NewPolicy()
+	p.AllowAttrs("color").OnElements("font")
+	p.AllowElements("font")
+
+	tt := test{
+		in:       `<font face="Arial">No link here. <a href="http://link.com">link here</a>.</font> Should not be linked here.`,
+		expected: `No link here. <a href="http://link.com" rel="nofollow">link here</a>. Should not be linked here.`,
+	}
+	out := p.Sanitize(tt.in)
 	if out != tt.expected {
 		t.Errorf(
 			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
