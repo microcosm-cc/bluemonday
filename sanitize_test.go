@@ -1280,7 +1280,7 @@ func TestIssue9(t *testing.T) {
 
 func TestIssue18(t *testing.T) {
 	p := UGCPolicy()
-	//p := NewPolicy()
+
 	p.AllowAttrs("color").OnElements("font")
 	p.AllowElements("font")
 
@@ -1303,7 +1303,7 @@ func TestAllowNoAttrs(t *testing.T) {
 	outputFail := "test"
 	outputOk := input
 
-	p := Policy{}
+	p := NewPolicy()
 	p.AllowElements("tag")
 
 	if output := p.Sanitize(input); output != outputFail {
@@ -1332,7 +1332,7 @@ func TestSkipElementsContent(t *testing.T) {
 	outputFail := "test"
 	outputOk := ""
 
-	p := Policy{}
+	p := NewPolicy()
 
 	if output := p.Sanitize(input); output != outputFail {
 		t.Errorf(
