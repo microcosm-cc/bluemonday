@@ -1294,7 +1294,63 @@ func TestIssue18(t *testing.T) {
 			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
 			tt.in,
 			out,
-			tt.expected,
+			tt.expected)
+	}
+}
+
+func TestAllowNoAttrs(t *testing.T) {
+	input := "<tag>test</tag>"
+	outputFail := "test"
+	outputOk := input
+
+	p := Policy{}
+	p.AllowElements("tag")
+
+	if output := p.Sanitize(input); output != outputFail {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			outputFail,
+		)
+	}
+
+	p.AllowNoAttrs().OnElements("tag")
+
+	if output := p.Sanitize(input); output != outputOk {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			outputOk,
+		)
+	}
+}
+
+func TestSkipElementsContent(t *testing.T) {
+	input := "<tag>test</tag>"
+	outputFail := "test"
+	outputOk := ""
+
+	p := Policy{}
+
+	if output := p.Sanitize(input); output != outputFail {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			outputFail,
+		)
+	}
+
+	p.SkipElementsContent("tag")
+
+	if output := p.Sanitize(input); output != outputOk {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			outputOk,
 		)
 	}
 }

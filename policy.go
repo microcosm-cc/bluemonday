@@ -94,8 +94,9 @@ type attrPolicy struct {
 type attrPolicyBuilder struct {
 	p *Policy
 
-	attrNames []string
-	regexp    *regexp.Regexp
+	attrNames  []string
+	regexp     *regexp.Regexp
+	allowEmpty bool
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
@@ -136,13 +137,42 @@ func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 
 	p.init()
 
-	abp := attrPolicyBuilder{p: p}
+	abp := attrPolicyBuilder{
+		p:          p,
+		allowEmpty: false,
+	}
 
 	for _, attrName := range attrNames {
 		abp.attrNames = append(abp.attrNames, strings.ToLower(attrName))
 	}
 
 	return &abp
+}
+
+// AllowNoAttrs says that attributes on element are optional.
+//
+// The attribute policy is only added to the core policy when OnElements(...)
+// are called.
+func (p *Policy) AllowNoAttrs() *attrPolicyBuilder {
+
+	p.init()
+
+	abp := attrPolicyBuilder{
+		p:          p,
+		allowEmpty: true,
+	}
+	return &abp
+}
+
+// AllowNoAttrs says that attributes on element are optional.
+//
+// The attribute policy is only added to the core policy when OnElements(...)
+// are called.
+func (abp *attrPolicyBuilder) AllowNoAttrs() *attrPolicyBuilder {
+
+	abp.allowEmpty = true
+
+	return abp
 }
 
 // Matching allows a regular expression to be applied to a nascent attribute
@@ -174,6 +204,14 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 			}
 
 			abp.p.elsAndAttrs[element][attr] = ap
+		}
+
+		if abp.allowEmpty {
+			abp.p.setOfElementsWithoutAttrs[element] = struct{}{}
+
+			if _, ok := abp.p.elsAndAttrs[element]; !ok {
+				abp.p.elsAndAttrs[element] = make(map[string]attrPolicy)
+			}
 		}
 	}
 
@@ -330,6 +368,23 @@ func (p *Policy) AllowURLSchemeWithCustomPolicy(
 func (p *Policy) AllowDocType(allow bool) *Policy {
 
 	p.allowDocType = allow
+
+	return p
+}
+
+// SkipElementContent adds the HTML elements whose tags is needed to be removed
+// with it's content.
+func (p *Policy) SkipElementsContent(names ...string) *Policy {
+
+	p.init()
+
+	for _, element := range names {
+		element = strings.ToLower(element)
+
+		if _, ok := p.setOfElementsToSkipContent[element]; !ok {
+			p.setOfElementsToSkipContent[element] = struct{}{}
+		}
+	}
 
 	return p
 }
