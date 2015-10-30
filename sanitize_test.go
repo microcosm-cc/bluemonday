@@ -1354,3 +1354,21 @@ func TestSkipElementsContent(t *testing.T) {
 		)
 	}
 }
+
+func TestTagSkipClosingTagNested(t *testing.T) {
+	input := "<tag1><tag2><tag3>text</tag3></tag2></tag1>"
+	outputOk := "<tag2>text</tag2>"
+
+	p := NewPolicy()
+	p.AllowElements("tag1", "tag3")
+	p.AllowNoAttrs().OnElements("tag2")
+
+	if output := p.Sanitize(input); output != outputOk {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			outputOk,
+		)
+	}
+}
