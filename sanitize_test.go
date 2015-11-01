@@ -31,6 +31,7 @@ package bluemonday
 
 import (
 	"encoding/base64"
+	"golang.org/x/net/html"
 	"net/url"
 	"regexp"
 	"strings"
@@ -1370,8 +1371,8 @@ func TestAllowNoAttrs(t *testing.T) {
 }
 
 func TestSkipElementsContent(t *testing.T) {
-	input := "<tag>test</tag>"
-	outputFail := "test"
+	input := "<tag>1<tag>test</tag>2</tag>"
+	outputFail := "1test2"
 	outputOk := ""
 
 	p := NewPolicy()
@@ -1411,6 +1412,211 @@ func TestTagSkipClosingTagNested(t *testing.T) {
 			input,
 			output,
 			outputOk,
+		)
+	}
+}
+
+func TestCustomHandlerChangeAttribute(t *testing.T) {
+	input := `<tag1 attr1="1"><tag2 attr1="2"></tag2></tag1><tag3><tag2 attr1="3"/></tag3>`
+	expected := `<tag1 attr1="1a"><tag2 attr1="2a"></tag2></tag1><tag3><tag2 attr1="3a"/></tag3>`
+
+	p := NewPolicy()
+	p.AllowAttrs("attr1").OnElements("tag1", "tag2")
+	p.AllowNoAttrs().OnElements("tag3")
+	p.SetCustomElementHandler(
+		func(token html.Token) HandlerResult {
+			if token.Type == html.StartTagToken || token.Type == html.SelfClosingTagToken {
+				for i := range token.Attr {
+					if token.Attr[i].Key == "attr1" {
+						token.Attr[i].Val += "a"
+					}
+				}
+			}
+
+			return HandlerResult{
+				Token:         token,
+				SkipContent:   false,
+				SkipTag:       false,
+				DoNotSanitize: false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerChangeElement(t *testing.T) {
+	input := `<tag1 attr1="1"></tag1><tag1 attr1="2"/>`
+	handler := func(notsanitize bool) func(token html.Token) HandlerResult {
+		return func(token html.Token) HandlerResult {
+			if token.Data == "tag1" {
+				for i := range token.Attr {
+					if token.Attr[i].Key == "attr1" {
+						token.Attr[i].Key = "attr2"
+					}
+				}
+				token.Data = "tag2"
+			}
+
+			return HandlerResult{
+				Token:         token,
+				SkipContent:   false,
+				SkipTag:       false,
+				DoNotSanitize: notsanitize,
+			}
+		}
+	}
+
+	// change name and attr, both are allowed, no disabling sanitazing
+	p := NewPolicy()
+	p.AllowAttrs("attr1", "attr2").OnElements("tag1", "tag2")
+	p.SetCustomElementHandler(handler(false))
+
+	expected := `<tag2 attr2="1"></tag2><tag2 attr2="2"/>`
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+
+	// change name and attr, origin is allowed, no disabling sanitazing
+	p = NewPolicy()
+	p.AllowAttrs("attr1").OnElements("tag1")
+	p.SetCustomElementHandler(handler(false))
+
+	expected = ``
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+
+	// change name and attr, origin is allowed, disabling sanitazing
+	p = NewPolicy()
+	p.AllowAttrs("attr1").OnElements("tag1")
+	p.SetCustomElementHandler(handler(true))
+
+	expected = `<tag2 attr2="1"></tag2><tag2 attr2="2"/>`
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerSkipContent(t *testing.T) {
+	input := `<tag><tag skip="true">some</tag>thing</tag><skip skip="false">1<skip>23</skip>4</skip>`
+	expected := `<tag>thing</tag><skip skip="false">14</skip>`
+
+	p := NewPolicy()
+	p.AllowNoAttrs().OnElements("tag")
+	p.SkipElementsContent("skip")
+	var context string
+	p.SetCustomElementHandler(
+		func(token html.Token) HandlerResult {
+			if token.Type == html.StartTagToken {
+				for i := range token.Attr {
+					if token.Attr[i].Key == "skip" {
+						context = token.Data
+						if token.Attr[i].Val == "true" {
+							return HandlerResult{
+								Token:         token,
+								SkipContent:   true,
+								SkipTag:       false,
+								DoNotSanitize: true,
+							}
+						} else {
+							return HandlerResult{
+								Token:         token,
+								SkipContent:   false,
+								SkipTag:       false,
+								DoNotSanitize: true,
+							}
+						}
+					}
+				}
+			} else if token.Type == html.EndTagToken {
+				if token.Data == context {
+					return HandlerResult{
+						Token:         token,
+						SkipContent:   false,
+						SkipTag:       false,
+						DoNotSanitize: true,
+					}
+				}
+			}
+
+			return HandlerResult{
+				Token:         token,
+				SkipContent:   false,
+				SkipTag:       false,
+				DoNotSanitize: false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerSkipTag(t *testing.T) {
+	input := `<tag1 skip="true"><tag1><tag1 skip="true"><tag2></tag2></tag1></tag1></tag1>`
+	expected := `<tag1></tag1>`
+
+	p := NewPolicy()
+	p.AllowNoAttrs().OnElements("tag1")
+	p.SetCustomElementHandler(
+		func(token html.Token) HandlerResult {
+			for i := range token.Attr {
+				if token.Attr[i].Key == "skip" {
+					if token.Attr[i].Val == "true" {
+						return HandlerResult{
+							Token:         token,
+							SkipContent:   false,
+							SkipTag:       true,
+							DoNotSanitize: false,
+						}
+					}
+				}
+			}
+
+			return HandlerResult{
+				Token:         token,
+				SkipContent:   false,
+				SkipTag:       false,
+				DoNotSanitize: false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
 		)
 	}
 }

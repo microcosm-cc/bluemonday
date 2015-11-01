@@ -93,6 +93,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 	// endtag for THIS element encountered
 	skipElementContent := false
 	var skippingElementName string
+	var skippingElementCounter int
 
 	// per element stack of counters
 	//
@@ -133,7 +134,13 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 		case html.StartTagToken:
 
-			if !skipElementContent {
+			if skipElementContent {
+
+				if skippingElementName == token.Data {
+					skippingElementCounter++
+				}
+
+			} else {
 
 				// current element counters increment
 				curTagSkipStack := closingTagToSkipStack[token.Data]
@@ -153,6 +160,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					if result.SkipContent {
 						skipElementContent = true
 						skippingElementName = token.Data // origin
+						skippingElementCounter = 1
 						break
 					}
 
@@ -168,6 +176,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
 						skipElementContent = true
 						skippingElementName = token.Data
+						skippingElementCounter = 1
 					}
 					break
 				}
@@ -190,8 +199,11 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			if skipElementContent {
 				if skippingElementName == token.Data {
-					// stop skipping
-					skipElementContent = false
+					skippingElementCounter--
+					if skippingElementCounter == 0 {
+						// stop skipping
+						skipElementContent = false
+					}
 				}
 				break
 			}
@@ -204,7 +216,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			if len(curTagSkipStack) > 0 && curTagSkipStack[0] == 0 {
 				// skip element
-				closingTagToSkipStack[token.Data] = curTagSkipStack[:1]
+				closingTagToSkipStack[token.Data] = curTagSkipStack[1:]
 				break
 			}
 
