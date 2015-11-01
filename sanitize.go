@@ -395,7 +395,7 @@ func (p *Policy) sanitizeAttrs(
 }
 
 func (p *Policy) allowNoAttrs(elementName string) bool {
-	_, ok := p.setOfElementsWithoutAttrs[elementName]
+	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
 	return ok
 }
 
