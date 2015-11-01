@@ -90,6 +90,8 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 	tokenizer := html.NewTokenizer(r)
 
 	skipElementContent := false
+	skippingElementsCount := 0
+
 	skipClosingTag := false
 	closingTagToSkipStack := []string{}
 
@@ -118,11 +120,11 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			// Comments are ignored by default
 
 		case html.StartTagToken:
-
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
 				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
 					skipElementContent = true
+					skippingElementsCount++
 				}
 				break
 			}
@@ -139,7 +141,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 			}
 
-			buff.WriteString(token.String())
+			if !skipElementContent {
+				buff.WriteString(token.String())
+			}
 
 		case html.EndTagToken:
 
@@ -153,12 +157,17 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			if _, ok := p.elsAndAttrs[token.Data]; !ok {
 				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
-					skipElementContent = false
+					skippingElementsCount--
+					if skippingElementsCount == 0 {
+						skipElementContent = false
+					}
 				}
 				break
 			}
 
-			buff.WriteString(token.String())
+			if !skipElementContent {
+				buff.WriteString(token.String())
+			}
 
 		case html.SelfClosingTagToken:
 
