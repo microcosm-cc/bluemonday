@@ -1313,6 +1313,19 @@ func TestIssue23(t *testing.T) {
 	}
 
 	p = NewPolicy()
+	p.SkipElementsContent("tag1", "tag2")
+	input = `<tag1>cut<tag2></tag2></tag2>harm</tag1><tag1>123</tag1><tag2>234</tag2>`
+	out = p.Sanitize(input)
+	expected = ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+
+	p = NewPolicy()
 	p.SkipElementsContent("tag")
 	p.AllowElements("p")
 	input = `<tag>234<p>asd</p></tag>`
