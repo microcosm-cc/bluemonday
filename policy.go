@@ -30,6 +30,7 @@
 package bluemonday
 
 import (
+	"golang.org/x/net/html"
 	"net/url"
 	"regexp"
 	"strings"
@@ -80,6 +81,10 @@ type Policy struct {
 	// returning true are allowed.
 	allowURLSchemes map[string]urlPolicy
 
+	// Custom element handler, allows to modify and skip tags and attributes
+	// on program execution
+	customHandler ElementHandler
+
 	// If an element has had all attributes removed as a result of a policy
 	// being applied, then the element would be removed from the output.
 	//
@@ -108,6 +113,20 @@ type attrPolicyBuilder struct {
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
+
+// Custom handler result struct
+// Token - can be modified input, e.g. modify attributes or rename tag
+// SkipContent - skip tag and all it's content
+// SkipTag - skip only tag
+// DoNotSanitize - do not apply policy rules to this tag
+type HandlerResult struct {
+	Token         html.Token
+	SkipContent   bool
+	SkipTag       bool
+	DoNotSanitize bool
+}
+
+type ElementHandler func(token html.Token) HandlerResult
 
 // init initializes the maps if this has not been done already
 func (p *Policy) init() {
@@ -394,6 +413,17 @@ func (p *Policy) SkipElementsContent(names ...string) *Policy {
 		}
 	}
 
+	return p
+}
+
+// SetCustomElementHandler sets global handler which called for each tag.
+// Handler can decide what to do with this tag dynamically:
+// change attributes, rename tag, skip with dynamic rule etc.
+func (p *Policy) SetCustomElementHandler(handler ElementHandler) *Policy {
+
+	p.init()
+
+	p.customHandler = handler
 	return p
 }
 
