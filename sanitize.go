@@ -120,6 +120,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			// Comments are ignored by default
 
 		case html.StartTagToken:
+
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
 				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
@@ -184,7 +185,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				break
 			}
 
-			buff.WriteString(token.String())
+			if !skipElementContent {
+				buff.WriteString(token.String())
+			}
 
 		case html.TextToken:
 

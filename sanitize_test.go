@@ -1325,6 +1325,20 @@ func TestIssue23(t *testing.T) {
 			out,
 			expected)
 	}
+
+	p = NewPolicy()
+	p.SkipElementsContent("tag")
+	p.AllowElements("p", "br")
+	input = `<tag>234<p>as<br/>d</p></tag>`
+	out = p.Sanitize(input)
+	expected = ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
 }
 
 func TestAllowNoAttrs(t *testing.T) {
