@@ -149,25 +149,27 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 
 				if p.customHandler != nil {
-					result := p.customHandler(token)
+					result := p.customHandler(fromToken(token))
+					if result.Element.Type == StartTagElement { // ignore handler if wrong type
 
-					if result.SkipTag {
-						// by origin token.Data -> not need to call handler in EndTagToken if skipping
-						closingTagToSkipStack[token.Data] = append([]uint{1}, curTagSkipStack...)
-						break
-					}
+						if result.SkipTag {
+							// by origin token.Data -> not need to call handler in EndTagToken if skipping
+							closingTagToSkipStack[token.Data] = append([]uint{1}, curTagSkipStack...)
+							break
+						}
 
-					if result.SkipContent {
-						skipElementContent = true
-						skippingElementName = token.Data // origin
-						skippingElementCounter = 1
-						break
-					}
+						if result.SkipContent {
+							skipElementContent = true
+							skippingElementName = token.Data // origin
+							skippingElementCounter = 1
+							break
+						}
 
-					token = result.Token // changed token by handler
-					if result.DoNotSanitize {
-						buff.WriteString(token.String())
-						break
+						token = result.Element.toToken() // changed token by handler
+						if result.DoNotSanitize {
+							buff.WriteString(token.String())
+							break
+						}
 					}
 				}
 
@@ -223,12 +225,14 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if p.customHandler != nil {
 				// call handler in EndTagToken if token.Data is renamed
 				// or DoNotSanitize needed
-				result := p.customHandler(token)
+				result := p.customHandler(fromToken(token))
+				if result.Element.Type == EndTagElement { // ignore handler result if wrong type
 
-				token = result.Token
-				if result.DoNotSanitize {
-					buff.WriteString(token.String())
-					break
+					token = result.Element.toToken()
+					if result.DoNotSanitize {
+						buff.WriteString(token.String())
+						break
+					}
 				}
 			}
 
@@ -241,12 +245,14 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if !skipElementContent {
 
 				if p.customHandler != nil {
-					result := p.customHandler(token)
-					token = result.Token
+					result := p.customHandler(fromToken(token))
+					if result.Element.Type == SelfClosingTagElement {
+						token = result.Element.toToken()
 
-					if result.DoNotSanitize {
-						buff.WriteString(token.String())
-						break
+						if result.DoNotSanitize {
+							buff.WriteString(token.String())
+							break
+						}
 					}
 				}
 

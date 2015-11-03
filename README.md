@@ -300,18 +300,18 @@ Both examples exhibit the same issue, they declare attributes but do not then sp
 Sometimes you may need to modify HTML or use content-dependent rules. Custom handler can help with this:
 ```go
 p.SetCustomElementHandler(
-	func(token html.Token) bluemonday.HandlerResult {
-		if token.Data == "area" {
-			for i := range token.Attr {
-				if token.Attr[i].Key == "shape" && token.Attr[i].Val == "rect" {
+	func(element bluemonday.Element) bluemonday.HandlerResult {
+		if element.Data == "area" {
+			for i := range element.Attr {
+				if element.Attr[i].Key == "shape" && element.Attr[i].Val == "rect" {
 					// replace 'rect' with 'poly'
-					token.Attr[i].Val = "poly"
+					element.Attr[i].Val = "poly"
 				}
 			}
 		}
 
 		return bluemonday.HandlerResult{
-			Token:         token,
+			Element:       element,
 			SkipContent:   false,
 			SkipTag:       false,
 			DoNotSanitize: false,
