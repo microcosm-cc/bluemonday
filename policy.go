@@ -150,10 +150,9 @@ type Element struct {
 // SkipTag - skip only tag
 // DoNotSanitize - do not apply policy rules to this tag
 type HandlerResult struct {
-	Element       Element
-	SkipContent   bool
-	SkipTag       bool
-	DoNotSanitize bool
+	Element     Element
+	SkipContent bool
+	SkipTag     bool
 }
 
 type ElementHandler func(element Element) HandlerResult

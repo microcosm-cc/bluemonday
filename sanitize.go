@@ -166,10 +166,6 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 						}
 
 						token = result.Element.toToken() // changed token by handler
-						if result.DoNotSanitize {
-							buff.WriteString(token.String())
-							break
-						}
 					}
 				}
 
@@ -227,12 +223,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				// or DoNotSanitize needed
 				result := p.customHandler(fromToken(token))
 				if result.Element.Type == EndTagElement { // ignore handler result if wrong type
-
 					token = result.Element.toToken()
-					if result.DoNotSanitize {
-						buff.WriteString(token.String())
-						break
-					}
 				}
 			}
 
@@ -248,11 +239,6 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					result := p.customHandler(fromToken(token))
 					if result.Element.Type == SelfClosingTagElement {
 						token = result.Element.toToken()
-
-						if result.DoNotSanitize {
-							buff.WriteString(token.String())
-							break
-						}
 					}
 				}
 

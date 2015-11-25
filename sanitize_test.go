@@ -1447,10 +1447,9 @@ func TestCustomHandlerChangeAttribute(t *testing.T) {
 			}
 
 			return HandlerResult{
-				Element:       element,
-				SkipContent:   false,
-				SkipTag:       false,
-				DoNotSanitize: false,
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
 			}
 		},
 	)
@@ -1467,30 +1466,27 @@ func TestCustomHandlerChangeAttribute(t *testing.T) {
 
 func TestCustomHandlerChangeElement(t *testing.T) {
 	input := `<tag1 attr1="1"></tag1><tag1 attr1="2"/>`
-	handler := func(notsanitize bool) func(element Element) HandlerResult {
-		return func(element Element) HandlerResult {
-			if element.Data == "tag1" {
-				for i := range element.Attr {
-					if element.Attr[i].Key == "attr1" {
-						element.Attr[i].Key = "attr2"
-					}
+	handler := func(element Element) HandlerResult {
+		if element.Data == "tag1" {
+			for i := range element.Attr {
+				if element.Attr[i].Key == "attr1" {
+					element.Attr[i].Key = "attr2"
 				}
-				element.Data = "tag2"
 			}
+			element.Data = "tag2"
+		}
 
-			return HandlerResult{
-				Element:       element,
-				SkipContent:   false,
-				SkipTag:       false,
-				DoNotSanitize: notsanitize,
-			}
+		return HandlerResult{
+			Element:     element,
+			SkipContent: false,
+			SkipTag:     false,
 		}
 	}
 
 	// change name and attr, both are allowed, no disabling sanitazing
 	p := NewPolicy()
 	p.AllowAttrs("attr1", "attr2").OnElements("tag1", "tag2")
-	p.SetCustomElementHandler(handler(false))
+	p.SetCustomElementHandler(handler)
 
 	expected := `<tag2 attr2="1"></tag2><tag2 attr2="2"/>`
 	if output := p.Sanitize(input); output != expected {
@@ -1505,24 +1501,9 @@ func TestCustomHandlerChangeElement(t *testing.T) {
 	// change name and attr, origin is allowed, no disabling sanitazing
 	p = NewPolicy()
 	p.AllowAttrs("attr1").OnElements("tag1")
-	p.SetCustomElementHandler(handler(false))
+	p.SetCustomElementHandler(handler)
 
 	expected = ``
-	if output := p.Sanitize(input); output != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			output,
-			expected,
-		)
-	}
-
-	// change name and attr, origin is allowed, disabling sanitazing
-	p = NewPolicy()
-	p.AllowAttrs("attr1").OnElements("tag1")
-	p.SetCustomElementHandler(handler(true))
-
-	expected = `<tag2 attr2="1"></tag2><tag2 attr2="2"/>`
 	if output := p.Sanitize(input); output != expected {
 		t.Errorf(
 			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
@@ -1534,11 +1515,11 @@ func TestCustomHandlerChangeElement(t *testing.T) {
 }
 
 func TestCustomHandlerSkipContent(t *testing.T) {
-	input := `<tag><tag skip="true">some</tag>thing</tag><skip skip="false">1<skip>23</skip>4</skip>`
-	expected := `<tag>thing</tag><skip skip="false">14</skip>`
+	input := `<tag><tag skip="true">some</tag>thing</tag>`
+	expected := `<tag>thing</tag>`
 
 	p := NewPolicy()
-	p.AllowNoAttrs().OnElements("tag")
+	p.AllowNoAttrs().OnElements("tag", "skip")
 	p.SkipElementsContent("skip")
 	var context string
 	p.SetCustomElementHandler(
@@ -1549,17 +1530,15 @@ func TestCustomHandlerSkipContent(t *testing.T) {
 						context = element.Data
 						if element.Attr[i].Val == "true" {
 							return HandlerResult{
-								Element:       element,
-								SkipContent:   true,
-								SkipTag:       false,
-								DoNotSanitize: true,
+								Element:     element,
+								SkipContent: true,
+								SkipTag:     false,
 							}
 						} else {
 							return HandlerResult{
-								Element:       element,
-								SkipContent:   false,
-								SkipTag:       false,
-								DoNotSanitize: true,
+								Element:     element,
+								SkipContent: false,
+								SkipTag:     false,
 							}
 						}
 					}
@@ -1567,19 +1546,17 @@ func TestCustomHandlerSkipContent(t *testing.T) {
 			} else if element.Type == EndTagElement {
 				if element.Data == context {
 					return HandlerResult{
-						Element:       element,
-						SkipContent:   false,
-						SkipTag:       false,
-						DoNotSanitize: true,
+						Element:     element,
+						SkipContent: false,
+						SkipTag:     false,
 					}
 				}
 			}
 
 			return HandlerResult{
-				Element:       element,
-				SkipContent:   false,
-				SkipTag:       false,
-				DoNotSanitize: false,
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
 			}
 		},
 	)
@@ -1606,20 +1583,18 @@ func TestCustomHandlerSkipTag(t *testing.T) {
 				if element.Attr[i].Key == "skip" {
 					if element.Attr[i].Val == "true" {
 						return HandlerResult{
-							Element:       element,
-							SkipContent:   false,
-							SkipTag:       true,
-							DoNotSanitize: false,
+							Element:     element,
+							SkipContent: false,
+							SkipTag:     true,
 						}
 					}
 				}
 			}
 
 			return HandlerResult{
-				Element:       element,
-				SkipContent:   false,
-				SkipTag:       false,
-				DoNotSanitize: false,
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
 			}
 		},
 	)
@@ -1645,13 +1620,29 @@ func TestCustomHandlerErrorType(t *testing.T) {
 			element.Type = ErrorElement
 
 			return HandlerResult{
-				Element:       element,
-				SkipContent:   false,
-				SkipTag:       false,
-				DoNotSanitize: false,
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
 			}
 		},
 	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestSelfClosingAllowNoAttrsSkip(t *testing.T) {
+	input := `<tag/>`
+	expected := ``
+
+	p := NewPolicy()
+	p.AllowAttrs("attr").OnElements("tag")
 
 	if output := p.Sanitize(input); output != expected {
 		t.Errorf(

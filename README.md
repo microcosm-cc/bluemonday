@@ -314,7 +314,6 @@ p.SetCustomElementHandler(
 			Element:       element,
 			SkipContent:   false,
 			SkipTag:       false,
-			DoNotSanitize: false,
 		}
 	},
 )
