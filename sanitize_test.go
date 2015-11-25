@@ -1313,6 +1313,19 @@ func TestIssue23(t *testing.T) {
 	}
 
 	p = NewPolicy()
+	p.SkipElementsContent("tag1", "tag2")
+	input = `<tag1>cut<tag2></tag2></tag2>harm</tag1><tag1>123</tag1><tag2>234</tag2>`
+	out = p.Sanitize(input)
+	expected = ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+
+	p = NewPolicy()
 	p.SkipElementsContent("tag")
 	p.AllowElements("p")
 	input = `<tag>234<p>asd</p></tag>`
@@ -1371,8 +1384,8 @@ func TestAllowNoAttrs(t *testing.T) {
 }
 
 func TestSkipElementsContent(t *testing.T) {
-	input := "<tag>test</tag>"
-	outputFail := "test"
+	input := "<tag>1<tag>test</tag>2</tag>"
+	outputFail := "1test2"
 	outputOk := ""
 
 	p := NewPolicy()
@@ -1412,6 +1425,231 @@ func TestTagSkipClosingTagNested(t *testing.T) {
 			input,
 			output,
 			outputOk,
+		)
+	}
+}
+
+func TestCustomHandlerChangeAttribute(t *testing.T) {
+	input := `<tag1 attr1="1"><tag2 attr1="2"></tag2></tag1><tag3><tag2 attr1="3"/></tag3>`
+	expected := `<tag1 attr1="1a"><tag2 attr1="2a"></tag2></tag1><tag3><tag2 attr1="3a"/></tag3>`
+
+	p := NewPolicy()
+	p.AllowAttrs("attr1").OnElements("tag1", "tag2")
+	p.AllowNoAttrs().OnElements("tag3")
+	p.SetCustomElementHandler(
+		func(element Element) HandlerResult {
+			if element.Type == StartTagElement || element.Type == SelfClosingTagElement {
+				for i := range element.Attr {
+					if element.Attr[i].Key == "attr1" {
+						element.Attr[i].Val += "a"
+					}
+				}
+			}
+
+			return HandlerResult{
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerChangeElement(t *testing.T) {
+	input := `<tag1 attr1="1"></tag1><tag1 attr1="2"/>`
+	handler := func(element Element) HandlerResult {
+		if element.Data == "tag1" {
+			for i := range element.Attr {
+				if element.Attr[i].Key == "attr1" {
+					element.Attr[i].Key = "attr2"
+				}
+			}
+			element.Data = "tag2"
+		}
+
+		return HandlerResult{
+			Element:     element,
+			SkipContent: false,
+			SkipTag:     false,
+		}
+	}
+
+	// change name and attr, both are allowed, no disabling sanitazing
+	p := NewPolicy()
+	p.AllowAttrs("attr1", "attr2").OnElements("tag1", "tag2")
+	p.SetCustomElementHandler(handler)
+
+	expected := `<tag2 attr2="1"></tag2><tag2 attr2="2"/>`
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+
+	// change name and attr, origin is allowed, no disabling sanitazing
+	p = NewPolicy()
+	p.AllowAttrs("attr1").OnElements("tag1")
+	p.SetCustomElementHandler(handler)
+
+	expected = ``
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerSkipContent(t *testing.T) {
+	input := `<tag><tag skip="true">some</tag>thing</tag>`
+	expected := `<tag>thing</tag>`
+
+	p := NewPolicy()
+	p.AllowNoAttrs().OnElements("tag", "skip")
+	p.SkipElementsContent("skip")
+	var context string
+	p.SetCustomElementHandler(
+		func(element Element) HandlerResult {
+			if element.Type == StartTagElement {
+				for i := range element.Attr {
+					if element.Attr[i].Key == "skip" {
+						context = element.Data
+						if element.Attr[i].Val == "true" {
+							return HandlerResult{
+								Element:     element,
+								SkipContent: true,
+								SkipTag:     false,
+							}
+						} else {
+							return HandlerResult{
+								Element:     element,
+								SkipContent: false,
+								SkipTag:     false,
+							}
+						}
+					}
+				}
+			} else if element.Type == EndTagElement {
+				if element.Data == context {
+					return HandlerResult{
+						Element:     element,
+						SkipContent: false,
+						SkipTag:     false,
+					}
+				}
+			}
+
+			return HandlerResult{
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerSkipTag(t *testing.T) {
+	input := `<tag1 skip="true"><tag1><tag1 skip="true"><tag2></tag2></tag1></tag1></tag1>`
+	expected := `<tag1></tag1>`
+
+	p := NewPolicy()
+	p.AllowNoAttrs().OnElements("tag1")
+	p.SetCustomElementHandler(
+		func(element Element) HandlerResult {
+			for i := range element.Attr {
+				if element.Attr[i].Key == "skip" {
+					if element.Attr[i].Val == "true" {
+						return HandlerResult{
+							Element:     element,
+							SkipContent: false,
+							SkipTag:     true,
+						}
+					}
+				}
+			}
+
+			return HandlerResult{
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestCustomHandlerErrorType(t *testing.T) {
+	input := `<tag></tag><tag/>`
+	expected := input
+
+	p := NewPolicy()
+	p.AllowNoAttrs().OnElements("tag")
+	p.SetCustomElementHandler(
+		func(element Element) HandlerResult {
+			element.Type = ErrorElement
+
+			return HandlerResult{
+				Element:     element,
+				SkipContent: false,
+				SkipTag:     false,
+			}
+		},
+	)
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
+		)
+	}
+}
+
+func TestSelfClosingAllowNoAttrsSkip(t *testing.T) {
+	input := `<tag/>`
+	expected := ``
+
+	p := NewPolicy()
+	p.AllowAttrs("attr").OnElements("tag")
+
+	if output := p.Sanitize(input); output != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			output,
+			expected,
 		)
 	}
 }

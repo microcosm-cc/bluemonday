@@ -295,6 +295,30 @@ p.AllowAttrs(
 
 Both examples exhibit the same issue, they declare attributes but do not then specify whether they are whitelisted globally or only on specific elements (and which elements). Attributes belong to one or more elements, and the policy needs to declare this.
 
+### Custom handlers
+
+Sometimes you may need to modify HTML or use content-dependent rules. Custom handler can help with this:
+```go
+p.SetCustomElementHandler(
+	func(element bluemonday.Element) bluemonday.HandlerResult {
+		if element.Data == "area" {
+			for i := range element.Attr {
+				if element.Attr[i].Key == "shape" && element.Attr[i].Val == "rect" {
+					// replace 'rect' with 'poly'
+					element.Attr[i].Val = "poly"
+				}
+			}
+		}
+
+		return bluemonday.HandlerResult{
+			Element:       element,
+			SkipContent:   false,
+			SkipTag:       false,
+		}
+	},
+)
+```
+
 ## Limitations
 
 We are not yet including any tools to help whitelist and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression (inadvisable), **you should not allow the "style" attribute anywhere**.

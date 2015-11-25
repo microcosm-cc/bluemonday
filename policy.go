@@ -30,6 +30,8 @@
 package bluemonday
 
 import (
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 	"net/url"
 	"regexp"
 	"strings"
@@ -80,6 +82,10 @@ type Policy struct {
 	// returning true are allowed.
 	allowURLSchemes map[string]urlPolicy
 
+	// Custom element handler, allows to modify and skip tags and attributes
+	// on program execution
+	customHandler ElementHandler
+
 	// If an element has had all attributes removed as a result of a policy
 	// being applied, then the element would be removed from the output.
 	//
@@ -108,6 +114,48 @@ type attrPolicyBuilder struct {
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
+
+// HTML Attribute
+type Attribute struct {
+	Namespace string
+	Key       string
+	Val       string
+}
+
+type ElementType uint32
+
+const (
+	// ErrorToken means that an error occurred during tokenization.
+	ErrorElement ElementType = ElementType(html.ErrorToken)
+	// A StartTagToken looks like <a>.
+	StartTagElement ElementType = ElementType(html.StartTagToken)
+	// An EndTagToken looks like </a>.
+	EndTagElement ElementType = ElementType(html.EndTagToken)
+	// A SelfClosingTagToken tag looks like <br/>.
+	SelfClosingTagElement ElementType = ElementType(html.SelfClosingTagToken)
+)
+
+// HTML Tag element
+type Element struct {
+	Type ElementType
+	Data string
+	Attr []Attribute
+
+	dataAtom atom.Atom
+}
+
+// Custom handler result struct
+// Token - can be modified input, e.g. modify attributes or rename tag
+// SkipContent - skip tag and all it's content
+// SkipTag - skip only tag
+// DoNotSanitize - do not apply policy rules to this tag
+type HandlerResult struct {
+	Element     Element
+	SkipContent bool
+	SkipTag     bool
+}
+
+type ElementHandler func(element Element) HandlerResult
 
 // init initializes the maps if this has not been done already
 func (p *Policy) init() {
@@ -397,6 +445,17 @@ func (p *Policy) SkipElementsContent(names ...string) *Policy {
 	return p
 }
 
+// SetCustomElementHandler sets global handler which called for each tag.
+// Handler can decide what to do with this tag dynamically:
+// change attributes, rename tag, skip with dynamic rule etc.
+func (p *Policy) SetCustomElementHandler(handler ElementHandler) *Policy {
+
+	p.init()
+
+	p.customHandler = handler
+	return p
+}
+
 // addDefaultElementsWithoutAttrs adds the HTML elements that we know are valid
 // without any attributes to an internal map.
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
@@ -510,4 +569,64 @@ func (p *Policy) addDefaultSkipElementContent() {
 	p.setOfElementsToSkipContent["script"] = struct{}{}
 	p.setOfElementsToSkipContent["style"] = struct{}{}
 	p.setOfElementsToSkipContent["title"] = struct{}{}
+}
+
+// Convert Element from HandlerResult back to html.Token
+func (t Element) toToken() html.Token {
+	attrs := make([]html.Attribute, len(t.Attr))
+	for i := range t.Attr {
+		attrs[i].Key = t.Attr[i].Key
+		attrs[i].Namespace = t.Attr[i].Namespace
+		attrs[i].Val = t.Attr[i].Val
+	}
+
+	var tokenType html.TokenType
+	switch t.Type {
+	case ErrorElement:
+		fallthrough
+	case StartTagElement:
+		fallthrough
+	case EndTagElement:
+		fallthrough
+	case SelfClosingTagElement:
+		tokenType = html.TokenType(t.Type) // same value by definition
+	default:
+		tokenType = html.ErrorToken
+	}
+
+	return html.Token{
+		Type:     tokenType,
+		DataAtom: t.dataAtom,
+		Data:     t.Data,
+		Attr:     attrs,
+	}
+}
+
+// Wrap html.Token with Element to CustomHandler
+func fromToken(token html.Token) (e Element) {
+	attrs := make([]Attribute, len(token.Attr))
+	for i := range token.Attr {
+		attrs[i].Key = token.Attr[i].Key
+		attrs[i].Namespace = token.Attr[i].Namespace
+		attrs[i].Val = token.Attr[i].Val
+	}
+
+	var tokenType ElementType
+	switch token.Type {
+	case html.StartTagToken:
+		fallthrough
+	case html.EndTagToken:
+		fallthrough
+	case html.SelfClosingTagToken:
+		tokenType = ElementType(token.Type) // same value by definition
+	default:
+		tokenType = ErrorElement
+	}
+
+	return Element{
+		Type:     tokenType,
+		dataAtom: token.DataAtom,
+		Data:     token.Data,
+		Attr:     attrs,
+	}
 }

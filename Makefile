@@ -36,8 +36,8 @@ test:
 
 cover: COVERAGE_FILE := coverage.out
 cover:
-	@go test -coverprofile=$(COVERAGE_FILE) && \
-	cover -html=$(COVERAGE_FILE) && rm $(COVERAGE_FILE)
+	@go test -coverprofile=$(COVERAGE_FILE)
+	@go tool cover -html=$(COVERAGE_FILE) && rm $(COVERAGE_FILE)
 
 clean:
 	@find $(GOPATH)/pkg/*/github.com/microcosm-cc -name bluemonday.a -delete

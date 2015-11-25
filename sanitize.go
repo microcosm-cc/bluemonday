@@ -89,11 +89,24 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 	var buff bytes.Buffer
 	tokenizer := html.NewTokenizer(r)
 
+	// if it's started to skipping element, skip all until
+	// endtag for THIS element encountered
 	skipElementContent := false
-	skippingElementsCount := 0
+	var skippingElementName string
+	var skippingElementCounter int
 
-	skipClosingTag := false
-	closingTagToSkipStack := []string{}
+	// per element stack of counters
+	//
+	//                       allow
+	//                handler  |   handler  policy
+	//                 skip    |    skip    skip
+	//                   |     |     |       |
+	//                   v     v     v       v
+	// timeline:       <tag1><tag1><tag1> <tag2></tag2></tag1></tag1></tag1>
+	// counters: tag1   [1]   [2]   [1,3]  [1,3]  [1,3]  [0,2]  [1]    [0]
+	//           tag2   []    []    []     [1]    [0]    []     []     []
+	//                                            skip   skip  allow   skip
+	closingTagToSkipStack := map[string][]uint{}
 
 	for {
 		if tokenizer.Next() == html.ErrorToken {
@@ -121,71 +134,127 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 		case html.StartTagToken:
 
-			aps, ok := p.elsAndAttrs[token.Data]
-			if !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
-					skipElementContent = true
-					skippingElementsCount++
+			if skipElementContent {
+
+				if skippingElementName == token.Data {
+					skippingElementCounter++
 				}
-				break
-			}
 
-			if len(token.Attr) != 0 {
-				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
-			}
+			} else {
 
-			if len(token.Attr) == 0 {
-				if !p.allowNoAttrs(token.Data) {
-					skipClosingTag = true
-					closingTagToSkipStack = append(closingTagToSkipStack, token.Data)
+				// current element counters increment
+				curTagSkipStack := closingTagToSkipStack[token.Data]
+				for i := range curTagSkipStack {
+					curTagSkipStack[i] += 1
+				}
+
+				if p.customHandler != nil {
+					result := p.customHandler(fromToken(token))
+					if result.Element.Type == StartTagElement { // ignore handler if wrong type
+
+						if result.SkipTag {
+							// by origin token.Data -> not need to call handler in EndTagToken if skipping
+							closingTagToSkipStack[token.Data] = append([]uint{1}, curTagSkipStack...)
+							break
+						}
+
+						if result.SkipContent {
+							skipElementContent = true
+							skippingElementName = token.Data // origin
+							skippingElementCounter = 1
+							break
+						}
+
+						token = result.Element.toToken() // changed token by handler
+					}
+				}
+
+				aps, ok := p.elsAndAttrs[token.Data]
+				if !ok {
+					if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
+						skipElementContent = true
+						skippingElementName = token.Data
+						skippingElementCounter = 1
+					}
 					break
 				}
-			}
 
-			if !skipElementContent {
+				if len(token.Attr) != 0 {
+					token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
+				}
+
+				if len(token.Attr) == 0 {
+					if !p.allowNoAttrs(token.Data) {
+						closingTagToSkipStack[token.Data] = append([]uint{1}, curTagSkipStack...)
+						break
+					}
+				}
+
 				buff.WriteString(token.String())
 			}
 
 		case html.EndTagToken:
 
-			if skipClosingTag && closingTagToSkipStack[len(closingTagToSkipStack)-1] == token.Data {
-				closingTagToSkipStack = closingTagToSkipStack[:len(closingTagToSkipStack)-1]
-				if len(closingTagToSkipStack) == 0 {
-					skipClosingTag = false
-				}
-				break
-			}
-
-			if _, ok := p.elsAndAttrs[token.Data]; !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
-					skippingElementsCount--
-					if skippingElementsCount == 0 {
+			if skipElementContent {
+				if skippingElementName == token.Data {
+					skippingElementCounter--
+					if skippingElementCounter == 0 {
+						// stop skipping
 						skipElementContent = false
 					}
 				}
 				break
 			}
 
-			if !skipElementContent {
+			// current element counters decrement
+			curTagSkipStack := closingTagToSkipStack[token.Data]
+			for i := range curTagSkipStack {
+				curTagSkipStack[i] -= 1
+			}
+
+			if len(curTagSkipStack) > 0 && curTagSkipStack[0] == 0 {
+				// skip element
+				closingTagToSkipStack[token.Data] = curTagSkipStack[1:]
+				break
+			}
+
+			if p.customHandler != nil {
+				// call handler in EndTagToken if token.Data is renamed
+				// or DoNotSanitize needed
+				result := p.customHandler(fromToken(token))
+				if result.Element.Type == EndTagElement { // ignore handler result if wrong type
+					token = result.Element.toToken()
+				}
+			}
+
+			if _, ok := p.elsAndAttrs[token.Data]; ok {
 				buff.WriteString(token.String())
 			}
 
 		case html.SelfClosingTagToken:
 
-			aps, ok := p.elsAndAttrs[token.Data]
-			if !ok {
-				break
-			}
-
-			if len(token.Attr) != 0 {
-				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
-			}
-
-			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
-				break
-			}
-
 			if !skipElementContent {
+
+				if p.customHandler != nil {
+					result := p.customHandler(fromToken(token))
+					if result.Element.Type == SelfClosingTagElement {
+						token = result.Element.toToken()
+					}
+				}
+
+				aps, ok := p.elsAndAttrs[token.Data]
+				if !ok {
+					break
+				}
+
+				if len(token.Attr) != 0 {
+					token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
+				}
+
+				if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
+					break
+				}
+
 				buff.WriteString(token.String())
 			}
 
