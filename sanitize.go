@@ -86,15 +86,16 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 	// would initiliaze the maps, then we need to do that.
 	p.init()
 
-	var buff bytes.Buffer
+	var (
+		buff                     bytes.Buffer
+		skipElementContent       bool
+		skippingElementsCount    int64
+		skipClosingTag           bool
+		closingTagToSkipStack    []string
+		mostRecentlyStartedToken string
+	)
+
 	tokenizer := html.NewTokenizer(r)
-
-	skipElementContent := false
-	skippingElementsCount := 0
-
-	skipClosingTag := false
-	closingTagToSkipStack := []string{}
-
 	for {
 		if tokenizer.Next() == html.ErrorToken {
 			err := tokenizer.Err()
@@ -120,6 +121,8 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			// Comments are ignored by default
 
 		case html.StartTagToken:
+
+			mostRecentlyStartedToken = token.Data
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
@@ -192,7 +195,19 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.TextToken:
 
 			if !skipElementContent {
-				buff.WriteString(token.String())
+				switch strings.ToLower(mostRecentlyStartedToken) {
+				case "javascript":
+					// not encouraged, but if a policy allows JavaScript we
+					// should not HTML escape it as that would break the output
+					buff.WriteString(token.Data)
+				case "style":
+					// not encouraged, but if a policy allows CSS styles we
+					// should not HTML escape it as that would break the output
+					buff.WriteString(token.Data)
+				default:
+					// HTML escape the text
+					buff.WriteString(token.String())
+				}
 			}
 
 		default:
