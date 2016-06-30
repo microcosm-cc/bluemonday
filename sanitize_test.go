@@ -157,10 +157,6 @@ func TestLinks(t *testing.T) {
 			expected: `<a href="#top" rel="nofollow">`,
 		},
 		test{
-			in:       `<a href="?">`,
-			expected: ``,
-		},
-		test{
 			in:       `<a href="?q=1">`,
 			expected: `<a href="?q=1" rel="nofollow">`,
 		},
@@ -229,10 +225,6 @@ func TestLinkTargets(t *testing.T) {
 		test{
 			in:       `<a href="#top">`,
 			expected: `<a href="#top">`,
-		},
-		test{
-			in:       `<a href="?">`,
-			expected: ``,
 		},
 		test{
 			in:       `<a href="?q=1">`,
