@@ -139,6 +139,11 @@ func TestUGCPolicy(t *testing.T) {
 			in:       `<a name="header" id="header">Header text</a>`,
 			expected: `<a id="header">Header text</a>`,
 		},
+		// Image map and links
+		test{
+			in:       `<img src="planets.gif" width="145" height="126" alt="" usemap="#demomap"><map name="demomap"><area shape="rect" coords="0,0,82,126" href="demo.htm" alt="1"><area shape="circle" coords="90,58,3" href="demo.htm" alt="2"><area shape="circle" coords="124,58,8" href="demo.htm" alt="3"></map>`,
+			expected: `<img src="planets.gif" width="145" height="126" alt="" usemap="#demomap"><map name="demomap"><area shape="rect" coords="0,0,82,126" href="demo.htm" alt="1" rel="nofollow"><area shape="circle" coords="90,58,3" href="demo.htm" alt="2" rel="nofollow"><area shape="circle" coords="124,58,8" href="demo.htm" alt="3" rel="nofollow"></map>`,
+		},
 		// Tables
 		test{
 			in: `<table style="color: rgb(0, 0, 0);">` +

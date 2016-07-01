@@ -143,15 +143,21 @@ func UGCPolicy() *Policy {
 	p.AllowAttrs("href").OnElements("a")
 
 	// "area" is permitted along with the attributes that map image maps work
+	p.AllowAttrs("name").Matching(
+		regexp.MustCompile(`^([\p{L}\p{N}_-]+)$`),
+	).OnElements("map")
 	p.AllowAttrs("alt").Matching(Paragraph).OnElements("area")
 	p.AllowAttrs("coords").Matching(
-		regexp.MustCompile(`^([0-9]+,){2}(,[0-9]+)*$`),
+		regexp.MustCompile(`^([0-9]+,)+[0-9]+$`),
 	).OnElements("area")
 	p.AllowAttrs("href").OnElements("area")
 	p.AllowAttrs("rel").Matching(SpaceSeparatedTokens).OnElements("area")
 	p.AllowAttrs("shape").Matching(
 		regexp.MustCompile(`(?i)^(default|circle|rect|poly)$`),
 	).OnElements("area")
+	p.AllowAttrs("usemap").Matching(
+		regexp.MustCompile(`(?i)^#[\p{L}\p{N}_-]+$`),
+	).OnElements("img")
 
 	// "link" is not permitted
 
