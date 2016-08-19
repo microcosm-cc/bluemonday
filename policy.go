@@ -397,6 +397,19 @@ func (p *Policy) SkipElementsContent(names ...string) *Policy {
 	return p
 }
 
+// AllowElementsContent marks the HTML elements whose content should be
+// retained after removing the tag.
+func (p *Policy) AllowElementsContent(names ...string) *Policy {
+
+	p.init()
+
+	for _, element := range names {
+		delete(p.setOfElementsToSkipContent, strings.ToLower(element))
+	}
+
+	return p
+}
+
 // addDefaultElementsWithoutAttrs adds the HTML elements that we know are valid
 // without any attributes to an internal map.
 // i.e. we know that <table> is valid, but <bdo> isn't valid as the "dir" attr
