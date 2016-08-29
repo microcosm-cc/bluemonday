@@ -1407,3 +1407,44 @@ func TestTagSkipClosingTagNested(t *testing.T) {
 		)
 	}
 }
+
+func TestAddSpaces(t *testing.T) {
+	p := UGCPolicy()
+	p.AddSpaceWhenStrippingTag(true)
+
+	tests := []test{
+		test{
+			in:       `<foo>Hello</foo><bar>World</bar>`,
+			expected: ` Hello  World `,
+		},
+		test{
+			in:       `<p>Hello</p><bar>World</bar>`,
+			expected: `<p>Hello</p> World `,
+		},
+		test{
+			in:       `<p>Hello</p><foo /><p>World</p>`,
+			expected: `<p>Hello</p> <p>World</p>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

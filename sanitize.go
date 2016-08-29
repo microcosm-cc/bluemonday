@@ -130,6 +130,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					skipElementContent = true
 					skippingElementsCount++
 				}
+				if p.addSpaces {
+					buff.WriteString(" ")
+				}
 				break
 			}
 
@@ -141,6 +144,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				if !p.allowNoAttrs(token.Data) {
 					skipClosingTag = true
 					closingTagToSkipStack = append(closingTagToSkipStack, token.Data)
+					if p.addSpaces {
+						buff.WriteString(" ")
+					}
 					break
 				}
 			}
@@ -156,6 +162,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				if len(closingTagToSkipStack) == 0 {
 					skipClosingTag = false
 				}
+				if p.addSpaces {
+					buff.WriteString(" ")
+				}
 				break
 			}
 
@@ -165,6 +174,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					if skippingElementsCount == 0 {
 						skipElementContent = false
 					}
+				}
+				if p.addSpaces {
+					buff.WriteString(" ")
 				}
 				break
 			}
@@ -177,6 +189,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
+				if p.addSpaces {
+					buff.WriteString(" ")
+				}
 				break
 			}
 
@@ -185,6 +200,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			}
 
 			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
+				if p.addSpaces {
+					buff.WriteString(" ")
+				}
 				break
 			}
 
