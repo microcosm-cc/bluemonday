@@ -256,6 +256,15 @@ That helper will enable GIF, JPEG, PNG and WEBP images.
 
 It should be noted that there is a potential [security](http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/) [risk](https://capec.mitre.org/data/definitions/244.html) with the use of data URI links. You should only enable data URI links if you already trust the content.
 
+We also have some features to help deal with user generated content:
+```go
+p.AddTargetBlankToFullyQualifiedLinks(true)
+```
+
+This will ensure that anchor `<a href="" />` links that are fully qualified (the href destination includes a host name) will get `target="_blank"` added to them.
+
+Additionally any link that has `target="_blank"` after the policy has been applied will also have the `rel` attribute adjusted to add `noopener`. This means a link may start like `<a href="//host/path"/>` and will end up as `<a href="//host/path" rel="noopener" target="_blank">`. It is important to note that the addition of `noopener` is a security feature and not an issue. There is an unfortunate feature to browsers that a browser window opened as a result of `target="_blank"` can still control the opener (your web page) and this protects against that. The background to this can be found here: [https://dev.to/ben/the-targetblank-vulnerability-by-example](https://dev.to/ben/the-targetblank-vulnerability-by-example)
+
 ### Policy Building Helpers
 
 We also bundle some helpers to simplify policy building:
