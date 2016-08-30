@@ -58,7 +58,7 @@ We expect to be supplied with well-formatted HTML (closing elements for every ap
 
 ### Supported Go Versions
 
-bluemonday is regularly tested against Go 1.1, 1.2, 1.3, 1.4, 1.5 and tip.
+bluemonday is regularly tested against Go 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7 and tip.
 
 We do not support Go 1.0 as we depend on `golang.org/x/net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
 
@@ -303,7 +303,6 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 ## TODO
 
-* Add support for allowing the list of HTML elements that are permitted without attributes to be configured
 * Add support for CSS sanitisation to allow some CSS properties based on a whitelist, possibly using the [Gorilla CSS3 scanner](http://www.gorillatoolkit.org/pkg/css/scanner)
 * Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that encapsulates 90% of what they're looking for but does more than they need, and to remove the extra things they do not want to make it 100% what they want
 * Investigate whether devs want a validating HTML mode, in which the HTML elements are not just transformed into a balanced tree (every start tag has a closing tag at the correct depth) but also that elements and character data appear only in their allowed context (i.e. that a `table` element isn't a descendent of a `caption`, that `colgroup`, `thead`, `tbody`, `tfoot` and `tr` are permitted, and that character data is not permitted)
