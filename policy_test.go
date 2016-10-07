@@ -35,11 +35,11 @@ func TestAllowElementsContent(t *testing.T) {
 	policy := NewPolicy().AllowElementsContent("iframe", "script")
 
 	tests := []test{
-		test{
+		{
 			in:       "<iframe src='http://url.com/test'>this is fallback content</iframe>",
 			expected: "this is fallback content",
 		},
-		test{
+		{
 			in:       "<script>var a = 10; alert(a);</script>",
 			expected: "var a = 10; alert(a);",
 		},
