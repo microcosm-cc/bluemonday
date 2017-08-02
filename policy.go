@@ -451,6 +451,7 @@ func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.setOfElementsAllowedWithoutAttrs["button"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["canvas"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["caption"] = struct{}{}
+	p.setOfElementsAllowedWithoutAttrs["center"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["cite"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["code"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["col"] = struct{}{}
@@ -484,6 +485,7 @@ func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.setOfElementsAllowedWithoutAttrs["kbd"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["li"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["mark"] = struct{}{}
+	p.setOfElementsAllowedWithoutAttrs["marquee"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["nav"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["ol"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["optgroup"] = struct{}{}
