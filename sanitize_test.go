@@ -1514,3 +1514,69 @@ func TestTargetBlankNoOpener(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestAllowStyles(t *testing.T) {
+	p := UGCPolicy()
+	p.AllowStyleProperties("text-align", "font-size")
+	p.AllowAttrs("style").OnElements("div")
+
+	tests := []test{
+		{
+			in:       `<div style="background: javascript:alert('xss');text-align: right;font-size: small;">no xss</div>`,
+			expected: `<div style="text-align: right;font-size: small;">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align: right;background: javascript:alert('xss');font-size: small;">no xss</div>`,
+			expected: `<div style="text-align: right;font-size: small;">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align: right;font-size: small;background: javascript:alert('xss');">no xss</div>`,
+			expected: `<div style="text-align: right;font-size: small;">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align: right;font-size: small;background: javascript:alert('xss')">no xss</div>`,
+			expected: `<div style="text-align: right;font-size: small;">no xss</div>`,
+		},
+		{
+			in:       `<div style="background: javascript:alert('xss');">no xss</div>`,
+			expected: `<div style="">no xss</div>`,
+		},
+		{
+			in:       `<div style="background: javascript:alert('xss')">no xss</div>`,
+			expected: `<div style="">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align;background: javascript:alert('xss')">no xss</div>`,
+			expected: `<div style="">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align">no xss</div>`,
+			expected: `<div style="">no xss</div>`,
+		},
+		{
+			in:       `<div style="text-align: right !important;)">no xss</div>`,
+			expected: `<div style="text-align: right !important;">no xss</div>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

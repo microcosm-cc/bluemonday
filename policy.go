@@ -94,6 +94,9 @@ type Policy struct {
 	setOfElementsAllowedWithoutAttrs map[string]struct{}
 
 	setOfElementsToSkipContent map[string]struct{}
+
+	// allowed style property names
+	allowedStyleProperties map[string]struct{}
 }
 
 type attrPolicy struct {
@@ -121,6 +124,7 @@ func (p *Policy) init() {
 		p.allowURLSchemes = make(map[string]urlPolicy)
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
+		p.allowedStyleProperties = make(map[string]struct{})
 		p.initialized = true
 	}
 }
@@ -426,6 +430,20 @@ func (p *Policy) AllowElementsContent(names ...string) *Policy {
 
 	for _, element := range names {
 		delete(p.setOfElementsToSkipContent, strings.ToLower(element))
+	}
+
+	return p
+}
+
+// AllowStyleProperties allows the given style properties in the style
+// attribute (note: does not style in inline <style> tags)
+//
+// ex. AllowStyleProperties("font-size", "text-align")
+func (p *Policy) AllowStyleProperties(properties ...string) *Policy {
+	p.init()
+
+	for _, property := range properties {
+		p.allowedStyleProperties[property] = struct{}{}
 	}
 
 	return p
