@@ -1034,10 +1034,6 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 			expected: ``,
 		},
 		{
-			in:       `<IMG SRC="jav&#x0D;ascript:alert('XSS');">`,
-			expected: `<img src="jav%0Dascript:alert%28%27XSS%27%29;">`,
-		},
-		{
 			in:       `<IMG SRC="jav&#x0A;ascript:alert('XSS');">`,
 			expected: ``,
 		},
@@ -1086,10 +1082,6 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 		{
 			in:       `<IMG """><SCRIPT>alert("XSS")</SCRIPT>">`,
 			expected: `&#34;&gt;`,
-		},
-		{
-			in:       "<IMG SRC=`javascript:alert(\"RSnake says, 'XSS'\")`>",
-			expected: `<img src="%60javascript:alert%28%22RSnake">`,
 		},
 		{
 			in:       `<IMG SRC=javascript:alert("XSS")>`,
