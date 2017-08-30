@@ -36,6 +36,8 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+
+	cssparser "github.com/aymerick/douceur/parser"
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
@@ -256,6 +258,11 @@ func (p *Policy) sanitizeAttrs(
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
 	for _, htmlAttr := range attrs {
+		// sanitize style attr
+		if htmlAttr.Key == "style" {
+			htmlAttr.Val = p.sanitizeCSSDeclarations(htmlAttr.Val)
+		}
+
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
@@ -536,4 +543,20 @@ func linkable(elementName string) bool {
 	default:
 		return false
 	}
+}
+
+func (p *Policy) sanitizeCSSDeclarations(declarations string) string {
+	decs, err := cssparser.ParseDeclarations(declarations)
+	if err != nil {
+		return "" // TODO error handling?
+	}
+
+	strs := make([]string, 0, len(decs))
+	for _, dec := range decs {
+		if _, allowed := p.allowedStyleProperties[dec.Property]; allowed {
+			strs = append(strs, dec.String())
+		}
+	}
+
+	return strings.Join(strs, "")
 }
