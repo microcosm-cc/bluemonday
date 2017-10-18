@@ -119,13 +119,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		switch token.Type {
 		case html.DoctypeToken:
 
-			// DocType is not handled as there is no safe parsing mechanism
-			// provided by golang.org/x/net/html for the content, and this can
-			// be misused to insert HTML tags that are not then sanitized
-			//
-			// One might wish to recursively sanitize here using the same policy
-			// but I will need to do some further testing before considering
-			// this.
+			if p.allowDocType {
+				buff.WriteString(token.String())
+			}
 
 		case html.CommentToken:
 
@@ -228,7 +224,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.TextToken:
 
 			if !skipElementContent {
-				switch mostRecentlyStartedToken {
+				switch strings.ToLower(mostRecentlyStartedToken) {
 				case "script":
 					// not encouraged, but if a policy allows JavaScript we
 					// should not HTML escape it as that would break the output
@@ -242,6 +238,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					buff.WriteString(token.String())
 				}
 			}
+
 		default:
 			// A token that didn't exist in the html package when we wrote this
 			return &bytes.Buffer{}
@@ -262,6 +259,12 @@ func (p *Policy) sanitizeAttrs(
 		return attrs
 	}
 
+	hasStylePolicies := false
+	sps, elementHasStylePolicies := p.elsAndStyles[elementName]
+	if len(p.globalStyles) > 0 || (elementHasStylePolicies && len(sps) > 0) {
+		hasStylePolicies = true
+	}
+
 	// Builds a new attribute slice based on the whether the attribute has been
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
@@ -273,6 +276,17 @@ func (p *Policy) sanitizeAttrs(
 				continue
 			}
 		}
+
+		// Is this a "style" attribute, and if so, do we need to sanitize it?
+		if htmlAttr.Key == "style" && hasStylePolicies {
+			htmlAttr = p.sanitizeStyles(htmlAttr, sps)
+			if htmlAttr.Val == "" {
+				// We've sanitized away any and all styles; don't bother to
+				// output the style attribute (even if it's allowed)
+				continue
+			}
+		}
+
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
@@ -288,7 +302,6 @@ func (p *Policy) sanitizeAttrs(
 
 		// Is there a global attribute policy that applies?
 		if ap, ok := p.globalAttrs[htmlAttr.Key]; ok {
-
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
@@ -501,6 +514,53 @@ func (p *Policy) sanitizeAttrs(
 	return cleanAttrs
 }
 
+func (p *Policy) sanitizeStyles(attr html.Attribute, sps map[string]stylePolicy) html.Attribute {
+	props := strings.Split(attr.Val, ";")
+	clean := []string{}
+
+	for _, prop := range props {
+		parts := strings.SplitN(prop, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		propName := strings.TrimSpace(parts[0])
+		propValue := strings.TrimSpace(parts[1])
+		if sp, ok := sps[propName]; ok {
+			if sp.regexp != nil {
+				if sp.regexp.MatchString(propValue) {
+					clean = append(clean, propName+": "+propValue)
+				}
+				continue
+			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
+				continue
+			}
+
+			clean = append(clean, propName+": "+propValue)
+		}
+
+		if sp, ok := p.globalStyles[propName]; ok {
+			if sp.regexp != nil {
+				if sp.regexp.MatchString(propValue) {
+					clean = append(clean, propName+": "+propValue)
+				}
+				continue
+			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
+				continue
+			}
+
+			clean = append(clean, propName+": "+propValue)
+		}
+	}
+
+	if len(clean) > 0 {
+		attr.Val = strings.Join(clean, "; ")
+	} else {
+		attr.Val = ""
+	}
+
+	return attr
+}
+
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
 	return ok
@@ -508,18 +568,13 @@ func (p *Policy) allowNoAttrs(elementName string) bool {
 
 func (p *Policy) validURL(rawurl string) (string, bool) {
 	if p.requireParseableURLs {
-		// URLs are valid if when space is trimmed the URL is valid
-		rawurl = strings.TrimSpace(rawurl)
-
-		// URLs cannot contain whitespace, unless it is a data-uri
-		if (strings.Contains(rawurl, " ") ||
+		// URLs do not contain whitespace
+		if strings.Contains(rawurl, " ") ||
 			strings.Contains(rawurl, "\t") ||
-			strings.Contains(rawurl, "\n")) &&
-			!strings.HasPrefix(rawurl, `data:`) {
+			strings.Contains(rawurl, "\n") {
 			return "", false
 		}
 
-		// URLs are valid if they parse
 		u, err := url.Parse(rawurl)
 		if err != nil {
 			return "", false
@@ -530,6 +585,7 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 			urlPolicy, ok := p.allowURLSchemes[u.Scheme]
 			if !ok {
 				return "", false
+
 			}
 
 			if urlPolicy == nil || urlPolicy(u) == true {
@@ -558,6 +614,16 @@ func linkable(elementName string) bool {
 	default:
 		return false
 	}
+}
+
+// stringInSlice returns true if needle exists in haystack
+func stringInSlice(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if strings.ToLower(straw) == strings.ToLower(needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func isDataAttribute(val string) bool {
