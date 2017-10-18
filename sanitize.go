@@ -252,10 +252,26 @@ func (p *Policy) sanitizeAttrs(
 		return attrs
 	}
 
+	hasStylePolicies := false
+	sps, elementHasStylePolicies := p.elsAndStyles[elementName]
+	if len(p.globalStyles) > 0 || (elementHasStylePolicies && len(sps) > 0) {
+		hasStylePolicies = true
+	}
+
 	// Builds a new attribute slice based on the whether the attribute has been
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
 	for _, htmlAttr := range attrs {
+		// Is this a "style" attribute, and if so, do we need to sanitize it?
+		if htmlAttr.Key == "style" && hasStylePolicies {
+			htmlAttr = p.sanitizeStyles(htmlAttr, sps)
+			if htmlAttr.Val == "" {
+				// We've sanitized away any and all styles; don't bother to
+				// output the style attribute (even if it's allowed)
+				continue
+			}
+		}
+
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
@@ -483,6 +499,53 @@ func (p *Policy) sanitizeAttrs(
 	return cleanAttrs
 }
 
+func (p *Policy) sanitizeStyles(attr html.Attribute, sps map[string]stylePolicy) html.Attribute {
+	props := strings.Split(attr.Val, ";")
+	clean := []string{}
+
+	for _, prop := range props {
+		parts := strings.SplitN(prop, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		propName := strings.TrimSpace(parts[0])
+		propValue := strings.TrimSpace(parts[1])
+		if sp, ok := sps[propName]; ok {
+			if sp.regexp != nil {
+				if sp.regexp.MatchString(propValue) {
+					clean = append(clean, propName+": "+propValue)
+				}
+				continue
+			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
+				continue
+			}
+
+			clean = append(clean, propName+": "+propValue)
+		}
+
+		if sp, ok := p.globalStyles[propName]; ok {
+			if sp.regexp != nil {
+				if sp.regexp.MatchString(propValue) {
+					clean = append(clean, propName+": "+propValue)
+				}
+				continue
+			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
+				continue
+			}
+
+			clean = append(clean, propName+": "+propValue)
+		}
+	}
+
+	if len(clean) > 0 {
+		attr.Val = strings.Join(clean, "; ")
+	} else {
+		attr.Val = ""
+	}
+
+	return attr
+}
+
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
 	return ok
@@ -541,4 +604,14 @@ func linkable(elementName string) bool {
 	default:
 		return false
 	}
+}
+
+// stringInSlice returns true if needle exists in haystack
+func stringInSlice(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if strings.ToLower(straw) == strings.ToLower(needle) {
+			return true
+		}
+	}
+	return false
 }
