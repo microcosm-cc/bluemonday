@@ -208,10 +208,13 @@ func ExamplePolicy_AllowStyles() {
 	// on every HTML element that has been whitelisted
 	p.AllowStyles("color").Matching(regexp.MustCompile("(?i)^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$")).Globally()
 
+	// Default handler
+	p.AllowStyles("background-origin").Globally()
+
 	// The span has an invalid 'color' which will be stripped along with other disallowed properties
 	html := p.Sanitize(
 		`<p style="color:#f00;">
-	<span style="text-decoration: underline; background-image: url(javascript:alert('XSS')); color: #f00ba">
+	<span style="text-decoration: underline; background-image: url(javascript:alert('XSS')); color: #f00ba; background-origin: invalidValue">
 		Red underlined <strong style="text-decoration:none;">text</strong>
 	</span>
 </p>`,

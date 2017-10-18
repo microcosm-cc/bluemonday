@@ -29,6 +29,8 @@
 
 package bluemonday
 
+//TODO sgutzwiller create map of styles to default handlers
+//TODO sgutzwiller create handlers for various attributes
 import (
 	"net/url"
 	"regexp"
@@ -110,6 +112,8 @@ type attrPolicy struct {
 }
 
 type stylePolicy struct {
+	// handler to validate
+	handler func(string) bool
 
 	// optional pattern to match, when not nil the regexp needs to match
 	// otherwise the property is removed
@@ -135,6 +139,7 @@ type stylePolicyBuilder struct {
 	propertyNames []string
 	regexp        *regexp.Regexp
 	enum          []string
+	handler       func(string) bool
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
@@ -348,13 +353,15 @@ func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
 			}
 
 			sp := stylePolicy{}
-			if spb.regexp != nil {
-				sp.regexp = spb.regexp
-			}
-			if len(spb.enum) > 0 {
+			if spb.handler != nil {
+				sp.handler = spb.handler
+			} else if len(spb.enum) > 0 {
 				sp.enum = spb.enum
+			} else if spb.regexp != nil {
+				sp.regexp = spb.regexp
+			} else {
+				sp.handler = getDefaultHandler(attr)
 			}
-
 			spb.p.elsAndStyles[element][attr] = sp
 		}
 	}
@@ -371,18 +378,27 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 			spb.p.globalStyles[attr] = stylePolicy{}
 		}
 
+		// Use only one strategy for validating styles, fallback to default
 		sp := stylePolicy{}
-		if spb.regexp != nil {
-			sp.regexp = spb.regexp
-		}
-		if len(spb.enum) > 0 {
+		if spb.handler != nil {
+			sp.handler = spb.handler
+		} else if len(spb.enum) > 0 {
 			sp.enum = spb.enum
+		} else if spb.regexp != nil {
+			sp.regexp = spb.regexp
+		} else {
+			sp.handler = getDefaultHandler(attr)
 		}
-
 		spb.p.globalStyles[attr] = sp
 	}
 
 	return spb.p
+}
+
+func initDefaultStyleHandlers() map[string]func(string) bool {
+	handlerMap := make(map[string]func(string) bool)
+
+	return handlerMap
 }
 
 // AllowElements will append HTML elements to the whitelist without applying an

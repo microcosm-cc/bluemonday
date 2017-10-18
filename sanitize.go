@@ -37,6 +37,8 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+
+	cssparser "github.com/chris-ramon/douceur/parser"
 )
 
 var (
@@ -119,9 +121,13 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		switch token.Type {
 		case html.DoctypeToken:
 
-			if p.allowDocType {
-				buff.WriteString(token.String())
-			}
+			// DocType is not handled as there is no safe parsing mechanism
+			// provided by golang.org/x/net/html for the content, and this can
+			// be misused to insert HTML tags that are not then sanitized
+			//
+			// One might wish to recursively sanitize here using the same policy
+			// but I will need to do some further testing before considering
+			// this.
 
 		case html.CommentToken:
 
@@ -276,13 +282,15 @@ func (p *Policy) sanitizeAttrs(
 				continue
 			}
 		}
-
 		// Is this a "style" attribute, and if so, do we need to sanitize it?
 		if htmlAttr.Key == "style" && hasStylePolicies {
-			htmlAttr = p.sanitizeStyles(htmlAttr, sps)
+			htmlAttr = p.sanitizeStyles(htmlAttr, elementName)
 			if htmlAttr.Val == "" {
 				// We've sanitized away any and all styles; don't bother to
 				// output the style attribute (even if it's allowed)
+				continue
+			} else {
+				cleanAttrs = append(cleanAttrs, htmlAttr)
 				continue
 			}
 		}
@@ -302,6 +310,7 @@ func (p *Policy) sanitizeAttrs(
 
 		// Is there a global attribute policy that applies?
 		if ap, ok := p.globalAttrs[htmlAttr.Key]; ok {
+
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
@@ -514,50 +523,71 @@ func (p *Policy) sanitizeAttrs(
 	return cleanAttrs
 }
 
-func (p *Policy) sanitizeStyles(attr html.Attribute, sps map[string]stylePolicy) html.Attribute {
-	props := strings.Split(attr.Val, ";")
-	clean := []string{}
+func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.Attribute {
+	sps := p.elsAndStyles[elementName]
 
-	for _, prop := range props {
-		parts := strings.SplitN(prop, ":", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		propName := strings.TrimSpace(parts[0])
-		propValue := strings.TrimSpace(parts[1])
-		if sp, ok := sps[propName]; ok {
-			if sp.regexp != nil {
-				if sp.regexp.MatchString(propValue) {
-					clean = append(clean, propName+": "+propValue)
-				}
-				continue
-			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
-				continue
-			}
-
-			clean = append(clean, propName+": "+propValue)
-		}
-
-		if sp, ok := p.globalStyles[propName]; ok {
-			if sp.regexp != nil {
-				if sp.regexp.MatchString(propValue) {
-					clean = append(clean, propName+": "+propValue)
-				}
-				continue
-			} else if len(sp.enum) > 0 && !stringInSlice(propValue, sp.enum) {
-				continue
-			}
-
-			clean = append(clean, propName+": "+propValue)
-		}
+	//Add semi-colon to end to fix parsing issue
+	if len(attr.Val) > 0 && attr.Val[len(attr.Val)-1] != ';' {
+		attr.Val = attr.Val + ";"
+	}
+	decs, err := cssparser.ParseDeclarations(attr.Val)
+	if err != nil {
+		attr.Val = ""
+		return attr
 	}
 
+	clean := []string{}
+	prefixes := []string{"-webkit-", "-moz-", "-ms-", "-o-", "mso-", "-xv-", "-atsc-", "-wap-", "-khtml-", "prince-", "-ah-", "-hp-", "-ro-", "-rim-", "-tc-"}
+
+	for _, dec := range decs {
+		addedProperty := false
+		tempProperty := strings.ToLower(dec.Property)
+		tempValue := strings.ToLower(dec.Value)
+		for _, i := range prefixes {
+			tempProperty = strings.TrimPrefix(tempProperty, i)
+		}
+		if sp, ok := sps[tempProperty]; ok {
+			if sp.handler != nil {
+				if sp.handler(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+			} else if len(sp.enum) > 0 {
+				if stringInSlice(tempValue, sp.enum) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+			} else if sp.regexp != nil {
+				if sp.regexp.MatchString(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+				continue
+			}
+		}
+
+		if sp, ok := p.globalStyles[tempProperty]; ok && !addedProperty {
+			if sp.handler != nil {
+				if sp.handler(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+			} else if len(sp.enum) > 0 {
+				if stringInSlice(tempValue, sp.enum) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+			} else if sp.regexp != nil {
+				if sp.regexp.MatchString(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+				continue
+			}
+		}
+	}
 	if len(clean) > 0 {
 		attr.Val = strings.Join(clean, "; ")
 	} else {
 		attr.Val = ""
 	}
-
 	return attr
 }
 
@@ -568,13 +598,18 @@ func (p *Policy) allowNoAttrs(elementName string) bool {
 
 func (p *Policy) validURL(rawurl string) (string, bool) {
 	if p.requireParseableURLs {
-		// URLs do not contain whitespace
-		if strings.Contains(rawurl, " ") ||
+		// URLs are valid if when space is trimmed the URL is valid
+		rawurl = strings.TrimSpace(rawurl)
+
+		// URLs cannot contain whitespace, unless it is a data-uri
+		if (strings.Contains(rawurl, " ") ||
 			strings.Contains(rawurl, "\t") ||
-			strings.Contains(rawurl, "\n") {
+			strings.Contains(rawurl, "\n")) &&
+			!strings.HasPrefix(rawurl, `data:`) {
 			return "", false
 		}
 
+		// URLs are valid if they parse
 		u, err := url.Parse(rawurl)
 		if err != nil {
 			return "", false
