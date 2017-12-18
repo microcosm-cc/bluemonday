@@ -490,7 +490,19 @@ func (p *Policy) allowNoAttrs(elementName string) bool {
 
 func (p *Policy) validURL(rawurl string) (string, bool) {
 	if p.requireParseableURLs {
-		u, err := url.Parse(strings.TrimSpace(rawurl))
+		// URLs are valid if when space is trimmed the URL is valid
+		rawurl = strings.TrimSpace(rawurl)
+
+		// URLs cannot contain whitespace, unless it is a data-uri
+		if (strings.Contains(rawurl, " ") ||
+			strings.Contains(rawurl, "\t") ||
+			strings.Contains(rawurl, "\n")) &&
+			!strings.HasPrefix(rawurl, `data:`) {
+			return "", false
+		}
+
+		// URLs are valid if they parse
+		u, err := url.Parse(rawurl)
 		if err != nil {
 			return "", false
 		}
