@@ -221,7 +221,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.TextToken:
 
 			if !skipElementContent {
-				switch strings.ToLower(mostRecentlyStartedToken) {
+				switch mostRecentlyStartedToken {
 				case "script":
 					// not encouraged, but if a policy allows JavaScript we
 					// should not HTML escape it as that would break the output
@@ -235,7 +235,6 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					buff.WriteString(token.String())
 				}
 			}
-
 		default:
 			// A token that didn't exist in the html package when we wrote this
 			return &bytes.Buffer{}

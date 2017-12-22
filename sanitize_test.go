@@ -1644,3 +1644,43 @@ AAAASUVORK5CYII=" alt="">`
 			expected)
 	}
 }
+
+func TestIssue55ScriptTags(t *testing.T) {
+	p1 := NewPolicy()
+	p2 := UGCPolicy()
+	p3 := UGCPolicy().AllowElements("script")
+
+	in := `<SCRIPT>document.write('<h1><header/h1>')</SCRIPT>`
+	expected := ``
+	out := p1.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = ``
+	out = p2.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = `<script>document.write('<h1><header/h1>')</script>`
+	out = p3.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+}
