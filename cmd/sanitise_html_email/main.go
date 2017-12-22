@@ -27,7 +27,6 @@ func main() {
 
 	// HTML email is often displayed in iframes and needs to preserve core
 	// structure
-	p.AllowDocType(true)
 	p.AllowElements("html", "head", "body", "title")
 
 	// There are not safe, and is only being done here to demonstrate how to

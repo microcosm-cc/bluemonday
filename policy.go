@@ -47,9 +47,6 @@ type Policy struct {
 	// exceptions
 	initialized bool
 
-	// Allows the <!DOCTYPE > tag to exist in the sanitized document
-	allowDocType bool
-
 	// If true then we add spaces when stripping tags, specifically the closing
 	// tag is replaced by a space character.
 	addSpaces bool
@@ -365,21 +362,6 @@ func (p *Policy) AllowURLSchemeWithCustomPolicy(
 	scheme = strings.ToLower(scheme)
 
 	p.allowURLSchemes[scheme] = urlPolicy
-
-	return p
-}
-
-// AllowDocType states whether the HTML sanitised by the sanitizer is allowed to
-// contain the HTML DocType tag: <!DOCTYPE HTML> or one of it's variants.
-//
-// The HTML spec only permits one doctype per document, and as you know how you
-// are using the output of this, you know best as to whether we should ignore it
-// (default) or not.
-//
-// If you are sanitizing a HTML fragment the default (false) is fine.
-func (p *Policy) AllowDocType(allow bool) *Policy {
-
-	p.allowDocType = allow
 
 	return p
 }
