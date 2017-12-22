@@ -312,7 +312,7 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 ## TODO
 
-* Add support for CSS sanitisation to allow some CSS properties based on a whitelist, possibly using the [Gorilla CSS3 scanner](http://www.gorillatoolkit.org/pkg/css/scanner)
+* Add support for CSS sanitisation to allow some CSS properties based on a whitelist, possibly using the [Gorilla CSS3 scanner](http://www.gorillatoolkit.org/pkg/css/scanner) - PRs welcome so long as testing covers XSS and demonstrates safety first
 * Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that encapsulates 90% of what they're looking for but does more than they need, and to remove the extra things they do not want to make it 100% what they want
 * Investigate whether devs want a validating HTML mode, in which the HTML elements are not just transformed into a balanced tree (every start tag has a closing tag at the correct depth) but also that elements and character data appear only in their allowed context (i.e. that a `table` element isn't a descendent of a `caption`, that `colgroup`, `thead`, `tbody`, `tfoot` and `tr` are permitted, and that character data is not permitted)
 
