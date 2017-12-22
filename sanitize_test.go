@@ -92,39 +92,6 @@ func TestSignatureBehaviour(t *testing.T) {
 	}
 }
 
-func TestAllowDocType(t *testing.T) {
-	p := NewPolicy()
-	p.AllowElements("b")
-
-	in := "<!DOCTYPE html>Hello, <b>World</b>!"
-	expected := "Hello, <b>World</b>!"
-
-	out := p.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-
-	// Allow the doctype and run the test again
-	p.AllowDocType(true)
-
-	expected = "<!DOCTYPE html>Hello, <b>World</b>!"
-
-	out = p.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test 1 failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-}
-
 func TestLinks(t *testing.T) {
 
 	tests := []test{

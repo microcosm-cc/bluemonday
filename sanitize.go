@@ -112,9 +112,13 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		switch token.Type {
 		case html.DoctypeToken:
 
-			if p.allowDocType {
-				buff.WriteString(token.String())
-			}
+			// DocType is not handled as there is no safe parsing mechanism
+			// provided by golang.org/x/net/html for the content, and this can
+			// be misused to insert HTML tags that are not then sanitized
+			//
+			// One might wish to recursively sanitize here using the same policy
+			// but I will need to do some further testing before considering
+			// this.
 
 		case html.CommentToken:
 
