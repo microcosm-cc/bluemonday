@@ -103,19 +103,22 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 	)
 
 	tokenizer := html.NewTokenizer(r)
+	reader := tokenizerReader{tokenizer}
 	for {
-		if tokenizer.Next() == html.ErrorToken {
-			err := tokenizer.Err()
+		token, err := reader.Token()
+		if token == nil {
 			if err == io.EOF {
 				// End of input means end of processing
 				return &buff
 			}
-
+			if err == nil {
+				// Skip nil token
+				continue
+			}
 			// Raw tokenizer error
 			return &bytes.Buffer{}
 		}
 
-		token := tokenizer.Token()
 		switch token.Type {
 		case html.DoctypeToken:
 
