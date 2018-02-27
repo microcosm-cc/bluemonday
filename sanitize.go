@@ -51,12 +51,12 @@ var (
 // It returns a HTML string that has been sanitized by the policy or an empty
 // string if an error has occurred (most likely as a consequence of extremely
 // malformed input)
-func (p *Policy) Sanitize(s string) string {
+func (p *Policy) Sanitize(s string, filters ...TokenReader) string {
 	if strings.TrimSpace(s) == "" {
 		return s
 	}
 
-	return p.sanitize(strings.NewReader(s)).String()
+	return p.sanitize(strings.NewReader(s), filters...).String()
 }
 
 // SanitizeBytes takes a []byte that contains a HTML fragment or document and applies
@@ -65,12 +65,12 @@ func (p *Policy) Sanitize(s string) string {
 // It returns a []byte containing the HTML that has been sanitized by the policy
 // or an empty []byte if an error has occurred (most likely as a consequence of
 // extremely malformed input)
-func (p *Policy) SanitizeBytes(b []byte) []byte {
+func (p *Policy) SanitizeBytes(b []byte, filters ...TokenReader) []byte {
 	if len(bytes.TrimSpace(b)) == 0 {
 		return b
 	}
 
-	return p.sanitize(bytes.NewReader(b)).Bytes()
+	return p.sanitize(bytes.NewReader(b), filters...).Bytes()
 }
 
 // SanitizeReader takes an io.Reader that contains a HTML fragment or document
@@ -78,12 +78,12 @@ func (p *Policy) SanitizeBytes(b []byte) []byte {
 //
 // It returns a bytes.Buffer containing the HTML that has been sanitized by the
 // policy. Errors during sanitization will merely return an empty result.
-func (p *Policy) SanitizeReader(r io.Reader) *bytes.Buffer {
-	return p.sanitize(r)
+func (p *Policy) SanitizeReader(r io.Reader, filters ...TokenReader) *bytes.Buffer {
+	return p.sanitize(r, filters...)
 }
 
 // Performs the actual sanitization process.
-func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
+func (p *Policy) sanitize(r io.Reader, filters ...TokenReader) *bytes.Buffer {
 
 	// It is possible that the developer has created the policy via:
 	//   p := bluemonday.Policy{}
@@ -100,10 +100,16 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		skipClosingTag           bool
 		closingTagToSkipStack    []string
 		mostRecentlyStartedToken string
+		reader                   TokenReader
 	)
 
-	tokenizer := html.NewTokenizer(r)
-	reader := tokenizerReader{tokenizer}
+	// Chain together TokenReader filters
+	reader = &tokenizerReader{html.NewTokenizer(r)}
+	for _, f := range filters {
+		f.Source(reader)
+		reader = f
+	}
+
 	for {
 		token, err := reader.Token()
 		if token == nil {

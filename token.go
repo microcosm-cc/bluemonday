@@ -32,6 +32,7 @@ package bluemonday
 import "golang.org/x/net/html"
 
 type TokenReader interface {
+	Source(source TokenReader)
 	Token() (*html.Token, error)
 }
 
@@ -47,4 +48,8 @@ func (r *tokenizerReader) Token() (*html.Token, error) {
 	}
 	token := r.Tokenizer.Token()
 	return &token, nil
+}
+
+// Source is a no-op for tokenizerReader
+func (r *tokenizerReader) Source(TokenReader) {
 }
