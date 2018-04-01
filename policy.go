@@ -76,6 +76,12 @@ type Policy struct {
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
 
+	// map[htmlElementName]map[cssPropertyName]stylePolicy
+	elsAndStyles map[string]map[string]stylePolicy
+
+	// map[cssPropertyName]stylePolicy
+	globalStyles map[string]stylePolicy
+
 	// If urlPolicy is nil, all URLs with matching schema are allowed.
 	// Otherwise, only the URLs with matching schema and urlPolicy(url)
 	// returning true are allowed.
@@ -100,12 +106,32 @@ type attrPolicy struct {
 	regexp *regexp.Regexp
 }
 
+type stylePolicy struct {
+
+	// optional pattern to match, when not nil the regexp needs to match
+	// otherwise the property is removed
+	regexp *regexp.Regexp
+
+	// optional list of allowed property values, for properties which
+	// have a defined list of allowed values; property will be removed
+	// if the value is not allowed
+	enum []string
+}
+
 type attrPolicyBuilder struct {
 	p *Policy
 
 	attrNames  []string
 	regexp     *regexp.Regexp
 	allowEmpty bool
+}
+
+type stylePolicyBuilder struct {
+	p *Policy
+
+	propertyNames []string
+	regexp        *regexp.Regexp
+	enum          []string
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
@@ -115,6 +141,8 @@ func (p *Policy) init() {
 	if !p.initialized {
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
+		p.elsAndStyles = make(map[string]map[string]stylePolicy)
+		p.globalStyles = make(map[string]stylePolicy)
 		p.allowURLSchemes = make(map[string]urlPolicy)
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
@@ -245,6 +273,98 @@ func (abp *attrPolicyBuilder) Globally() *Policy {
 	}
 
 	return abp.p
+}
+
+// AllowStyles takes a range of CSS property names and returns a
+// style policy builder that allows you to specify the pattern and scope of
+// the whitelisted property.
+//
+// The style policy is only added to the core policy when either Globally()
+// or OnElements(...) are called.
+func (p *Policy) AllowStyles(propertyNames ...string) *stylePolicyBuilder {
+
+	p.init()
+
+	abp := stylePolicyBuilder{
+		p: p,
+	}
+
+	for _, propertyName := range propertyNames {
+		abp.propertyNames = append(abp.propertyNames, strings.ToLower(propertyName))
+	}
+
+	return &abp
+}
+
+// Matching allows a regular expression to be applied to a nascent style
+// policy, and returns the style policy. Calling this more than once will
+// replace the existing regexp.
+func (spb *stylePolicyBuilder) Matching(regex *regexp.Regexp) *stylePolicyBuilder {
+
+	spb.regexp = regex
+
+	return spb
+}
+
+// MatchingEnum allows a list of allowed values to be applied to a nascent style
+// policy, and returns the style policy. Calling this more than once will
+// replace the existing list of allowed values.
+func (spb *stylePolicyBuilder) MatchingEnum(enum ...string) *stylePolicyBuilder {
+
+	spb.enum = enum
+
+	return spb
+}
+
+// OnElements will bind a style policy to a given range of HTML elements
+// and return the updated policy
+func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
+
+	for _, element := range elements {
+		element = strings.ToLower(element)
+
+		for _, attr := range spb.propertyNames {
+
+			if _, ok := spb.p.elsAndStyles[element]; !ok {
+				spb.p.elsAndStyles[element] = make(map[string]stylePolicy)
+			}
+
+			sp := stylePolicy{}
+			if spb.regexp != nil {
+				sp.regexp = spb.regexp
+			}
+			if len(spb.enum) > 0 {
+				sp.enum = spb.enum
+			}
+
+			spb.p.elsAndStyles[element][attr] = sp
+		}
+	}
+
+	return spb.p
+}
+
+// Globally will bind a style policy to all HTML elements and return the
+// updated policy
+func (spb *stylePolicyBuilder) Globally() *Policy {
+
+	for _, attr := range spb.propertyNames {
+		if _, ok := spb.p.globalStyles[attr]; !ok {
+			spb.p.globalStyles[attr] = stylePolicy{}
+		}
+
+		sp := stylePolicy{}
+		if spb.regexp != nil {
+			sp.regexp = spb.regexp
+		}
+		if len(spb.enum) > 0 {
+			sp.enum = spb.enum
+		}
+
+		spb.p.globalStyles[attr] = sp
+	}
+
+	return spb.p
 }
 
 // AllowElements will append HTML elements to the whitelist without applying an
