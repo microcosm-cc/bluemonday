@@ -42,7 +42,7 @@ import (
 var (
 	dataAttribute             = regexp.MustCompile("^data-.+")
 	dataAttributeXMLPrefix    = regexp.MustCompile("^xml.+")
-	dataAttributeInvalidChars = regexp.MustCompile("^.*[A-Z;].*$")
+	dataAttributeInvalidChars = regexp.MustCompile("[A-Z;]+")
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
