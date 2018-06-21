@@ -325,7 +325,6 @@ func TestDataAttributes(t *testing.T) {
 	p.AllowDataAttributes()
 
 	tests := []test{
-		// Empty elements
 		{
 			in:       `<p data-cfg="dave">text</p>`,
 			expected: `<p data-cfg="dave">text</p>`,
