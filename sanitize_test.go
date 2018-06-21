@@ -328,7 +328,12 @@ func TestDataAttributes(t *testing.T) {
 		{
 			in:       `<p data-cfg="dave">text</p>`,
 			expected: `<p data-cfg="dave">text</p>`,
-		}}
+		},
+		{
+			in:       `<p data-component="dave">text</p>`,
+			expected: `<p data-component="dave">text</p>`,
+		},
+	}
 
 	for ii, test := range tests {
 		out := p.Sanitize(test.in)
