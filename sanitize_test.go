@@ -338,6 +338,10 @@ func TestDataAttributes(t *testing.T) {
 			expected: `<p>text</p>`,
 		},
 		{
+			in:       `<p data-UPCASE="dave">text</p>`,
+			expected: `<p data-upcase="dave">text</p>`,
+		},
+		{
 			in:       `<p data-xml-prefix="dave">text</p>`,
 			expected: `<p>text</p>`,
 		},
