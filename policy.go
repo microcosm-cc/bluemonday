@@ -463,6 +463,7 @@ func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.setOfElementsAllowedWithoutAttrs["hr"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["html"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["i"] = struct{}{}
+	p.setOfElementsAllowedWithoutAttrs["iframe"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["ins"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["kbd"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["li"] = struct{}{}
@@ -508,7 +509,6 @@ func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.setOfElementsAllowedWithoutAttrs["var"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["video"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["wbr"] = struct{}{}
-	p.setOfElementsAllowedWithoutAttrs["iframe"] = struct{}{}
 
 }
 
