@@ -70,6 +70,9 @@ type Policy struct {
 	// When true, u, _ := url.Parse("url"); !u.IsAbs() is permitted
 	allowRelativeURLs bool
 
+	// When true, allow data attributes.
+	allowDataAttributes bool
+
 	// map[htmlElementName]map[htmlAttributeName]attrPolicy
 	elsAndAttrs map[string]map[string]attrPolicy
 
@@ -156,6 +159,10 @@ func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 	}
 
 	return &abp
+}
+
+func (p *Policy) AllowDataAttributes() {
+	p.allowDataAttributes = true
 }
 
 // AllowNoAttrs says that attributes on element are optional.

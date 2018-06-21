@@ -33,10 +33,13 @@ import (
 	"bytes"
 	"io"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html"
 )
+
+var dataAttribute = regexp.MustCompile("^data-.+$")
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
 // the given policy whitelist.
@@ -259,6 +262,13 @@ func (p *Policy) sanitizeAttrs(
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
 	for _, htmlAttr := range attrs {
+		if p.allowDataAttributes {
+			// If we see a data attribute, let it through.
+			if dataAttribute.MatchString(htmlAttr.Key) {
+				cleanAttrs = append(cleanAttrs, htmlAttr)
+				continue
+			}
+		}
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
@@ -274,6 +284,7 @@ func (p *Policy) sanitizeAttrs(
 
 		// Is there a global attribute policy that applies?
 		if ap, ok := p.globalAttrs[htmlAttr.Key]; ok {
+
 			if ap.regexp != nil {
 				if ap.regexp.MatchString(htmlAttr.Val) {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
