@@ -508,6 +508,7 @@ func (p *Policy) addDefaultElementsWithoutAttrs() {
 	p.setOfElementsAllowedWithoutAttrs["var"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["video"] = struct{}{}
 	p.setOfElementsAllowedWithoutAttrs["wbr"] = struct{}{}
+	p.setOfElementsAllowedWithoutAttrs["iframe"] = struct{}{}
 
 }
 

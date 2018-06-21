@@ -1684,3 +1684,21 @@ func TestIssue55ScriptTags(t *testing.T) {
 		)
 	}
 }
+
+func TestIssue68(t *testing.T) {
+	p := NewPolicy()
+	p.AllowElements("iframe")
+
+	in := `<iframe></iframe>`
+	expected := in
+	out := p.Sanitize(in)
+
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+}
