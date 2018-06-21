@@ -319,6 +319,44 @@ func TestEmptyAttributes(t *testing.T) {
 	}
 }
 
+func TestDataAttributes(t *testing.T) {
+
+	p := UGCPolicy()
+	p.AllowDataAttributes()
+
+	tests := []test{
+		{
+			in:       `<p data-cfg="dave">text</p>`,
+			expected: `<p data-cfg="dave">text</p>`,
+		},
+		{
+			in:       `<p data-component="dave">text</p>`,
+			expected: `<p data-component="dave">text</p>`,
+		},
+		{
+			in:       `<p data-semicolon;="dave">text</p>`,
+			expected: `<p>text</p>`,
+		},
+		{
+			in:       `<p data-xml-prefix="dave">text</p>`,
+			expected: `<p>text</p>`,
+		},
+	}
+
+	for ii, test := range tests {
+		out := p.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				ii,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
 func TestDataUri(t *testing.T) {
 
 	p := UGCPolicy()
