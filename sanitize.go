@@ -39,7 +39,11 @@ import (
 	"golang.org/x/net/html"
 )
 
-var dataAttribute = regexp.MustCompile("^data-.+$")
+var (
+	dataAttribute             = regexp.MustCompile("^data-.+")
+	dataAttributeXMLPrefix    = regexp.MustCompile("^xml.+")
+	dataAttributeInvalidChars = regexp.MustCompile("^.*[A-Z;].*$")
+)
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
 // the given policy whitelist.
@@ -264,7 +268,7 @@ func (p *Policy) sanitizeAttrs(
 	for _, htmlAttr := range attrs {
 		if p.allowDataAttributes {
 			// If we see a data attribute, let it through.
-			if dataAttribute.MatchString(htmlAttr.Key) {
+			if isDataAttribute(htmlAttr.Key) {
 				cleanAttrs = append(cleanAttrs, htmlAttr)
 				continue
 			}
@@ -555,4 +559,23 @@ func linkable(elementName string) bool {
 	default:
 		return false
 	}
+}
+
+func isDataAttribute(val string) bool {
+	if !dataAttribute.MatchString(val) {
+		return false
+	}
+	rest := strings.Split(val, "data-")
+	if len(rest) == 1 {
+		return false
+	}
+	// data-xml* is invalid.
+	if dataAttributeXMLPrefix.MatchString(rest[1]) {
+		return false
+	}
+	// no uppercase or semi-colons allowed.
+	if dataAttributeInvalidChars.MatchString(rest[1]) {
+		return false
+	}
+	return true
 }

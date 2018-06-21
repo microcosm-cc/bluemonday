@@ -161,6 +161,17 @@ func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 	return &abp
 }
 
+// AllowDataAttributes whitelists all data attributes. We can't specify the name
+// of each attribute exactly as they are customized.
+//
+// NOTE: These values are not sanitized and applications that evaluate or process
+// them without checking and verification of the input may be at risk if this option
+// is enabled. This is a 'caveat emptor' option and the person enabling this option
+// needs to fully understand the potential impact with regards to whatever application
+// will be consuming the sanitized HTML afterwards, i.e. if you know you put a link in a
+// data attribute and use that to automatically load some new window then you're giving
+// the author of a HTML fragment the means to open a malicious destination automatically.
+// Use with care!
 func (p *Policy) AllowDataAttributes() {
 	p.allowDataAttributes = true
 }

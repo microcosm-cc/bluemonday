@@ -333,6 +333,14 @@ func TestDataAttributes(t *testing.T) {
 			in:       `<p data-component="dave">text</p>`,
 			expected: `<p data-component="dave">text</p>`,
 		},
+		{
+			in:       `<p data-semicolon;="dave">text</p>`,
+			expected: `<p>text</p>`,
+		},
+		{
+			in:       `<p data-xml-prefix="dave">text</p>`,
+			expected: `<p>text</p>`,
+		},
 	}
 
 	for ii, test := range tests {
