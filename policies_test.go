@@ -80,15 +80,6 @@ func TestUGCPolicy(t *testing.T) {
 			in:       "<p onclick=alert(1337)>Hello, <b>World</b>!</p>",
 			expected: "<p>Hello, <b>World</b>!</p>",
 		},
-		// Inline tags featuring globals
-		{
-			in:       `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a><a href="https://example.org/#!" rel="nofollow">!</a>`,
-			expected: `<a href="http://example.org/" rel="nofollow">Hello, <b>World</b></a><a href="https://example.org/#%21" rel="nofollow">!</a>`,
-		},
-		{
-			in:       `Hello, <b>World</b><a title="!" href="https://example.org/#!" rel="nofollow">!</a>`,
-			expected: `Hello, <b>World</b><a title="!" href="https://example.org/#%21" rel="nofollow">!</a>`,
-		},
 		// Images
 		{
 			in:       `<a href="javascript:alert(1337)">foo</a>`,
