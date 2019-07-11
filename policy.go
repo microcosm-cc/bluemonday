@@ -339,6 +339,16 @@ func (spb *stylePolicyBuilder) MatchingEnum(enum ...string) *stylePolicyBuilder 
 	return spb
 }
 
+// MatchingHandler allows a handler to be applied to a nascent style
+// policy, and returns the style policy. Calling this more than once will
+// replace the existing handler.
+func (spb *stylePolicyBuilder) MatchingHandler(handler func(string) bool) *stylePolicyBuilder {
+
+	spb.handler = handler
+
+	return spb
+}
+
 // OnElements will bind a style policy to a given range of HTML elements
 // and return the updated policy
 func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
@@ -393,12 +403,6 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 	}
 
 	return spb.p
-}
-
-func initDefaultStyleHandlers() map[string]func(string) bool {
-	handlerMap := make(map[string]func(string) bool)
-
-	return handlerMap
 }
 
 // AllowElements will append HTML elements to the whitelist without applying an

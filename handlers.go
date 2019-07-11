@@ -1,3 +1,31 @@
+// Copyright (c) 2019, David Kitchen <david@buro9.com>
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice, this
+//   list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// * Neither the name of the organisation (Microcosm) nor the names of its
+//   contributors may be used to endorse or promote products derived from
+//   this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package bluemonday
 
 import (
@@ -5,221 +33,253 @@ import (
 	"strings"
 )
 
-var defaultStyleHandlers = map[string]func(string) bool{
-	"align-content":              AlignContentHandler,
-	"align-items":                AlignItemsHandler,
-	"align-self":                 AlignSelfHandler,
-	"all":                        AllHandler,
-	"animation":                  AnimationHandler,
-	"animation-delay":            AnimationDelayHandler,
-	"animation-direction":        AnimationDirectionHandler,
-	"animation-duration":         AnimationDurationHandler,
-	"animation-fill-mode":        AnimationFillModeHandler,
-	"animation-iteration-count":  AnimationIterationCountHandler,
-	"animation-name":             AnimationNameHandler,
-	"animation-play-state":       AnimationPlayStateHandler,
-	"animation-timing-function":  TimingFunctionHandler,
-	"backface-visibility":        BackfaceVisibilityHandler,
-	"background":                 BackgroundHandler,
-	"background-attachment":      BackgroundAttachmentHandler,
-	"background-blend-mode":      BackgroundBlendModeHandler,
-	"background-clip":            BackgroundClipHandler,
-	"background-color":           ColorHandler,
-	"background-image":           ImageHandler,
-	"background-origin":          BackgroundOriginHandler,
-	"background-position":        BackgroundPositionHandler,
-	"background-repeat":          BackgroundRepeatHandler,
-	"background-size":            BackgroundSizeHandler,
-	"border":                     BorderHandler,
-	"border-bottom":              BorderSideHandler,
-	"border-bottom-color":        ColorHandler,
-	"border-bottom-left-radius":  BorderSideRadiusHandler,
-	"border-bottom-right-radius": BorderSideRadiusHandler,
-	"border-bottom-style":        BorderSideStyleHandler,
-	"border-bottom-width":        BorderSideWidthHandler,
-	"border-collapse":            BorderCollapseHandler,
-	"border-color":               ColorHandler,
-	"border-image":               BorderImageHandler,
-	"border-image-outset":        BorderImageOutsetHandler,
-	"border-image-repeat":        BorderImageRepeatHandler,
-	"border-image-slice":         BorderImageSliceHandler,
-	"border-image-source":        ImageHandler,
-	"border-image-width":         BorderImageWidthHandler,
-	"border-left":                BorderSideHandler,
-	"border-left-color":          ColorHandler,
-	"border-left-style":          BorderSideStyleHandler,
-	"border-left-width":          BorderSideWidthHandler,
-	"border-radius":              BorderRadiusHandler,
-	"border-right":               BorderSideHandler,
-	"border-right-color":         ColorHandler,
-	"border-right-style":         BorderSideStyleHandler,
-	"border-right-width":         BorderSideWidthHandler,
-	"border-spacing":             BorderSpacingHandler,
-	"border-style":               BorderStyleHandler,
-	"border-top":                 BorderSideHandler,
-	"border-top-color":           ColorHandler,
-	"border-top-left-radius":     BorderSideRadiusHandler,
-	"border-top-right-radius":    BorderSideRadiusHandler,
-	"border-top-style":           BorderSideStyleHandler,
-	"border-top-width":           BorderSideWidthHandler,
-	"border-width":               BorderWidthHandler,
-	"bottom":                     SideHandler,
-	"box-decoration-break":       BoxDecorationBreakHandler,
-	"box-shadow":                 BoxShadowHandler,
-	"box-sizing":                 BoxSizingHandler,
-	"break-after":                BreakBeforeAfterHandler,
-	"break-before":               BreakBeforeAfterHandler,
-	"break-inside":               BreakInsideHandler,
-	"caption-side":               CaptionSideHandler,
-	"caret-color":                CaretColorHandler,
-	"clear":                      ClearHandler,
-	"clip":                       ClipHandler,
-	"color":                      ColorHandler,
-	"column-count":               ColumnCountHandler,
-	"column-fill":                ColumnFillHandler,
-	"column-gap":                 ColumnGapHandler,
-	"column-rule":                ColumnRuleHandler,
-	"column-rule-color":          ColorHandler,
-	"column-rule-style":          BorderSideStyleHandler,
-	"column-rule-width":          ColumnRuleWidthHandler,
-	"column-span":                ColumnSpanHandler,
-	"column-width":               ColumnWidthHandler,
-	"columns":                    ColumnsHandler,
-	"cursor":                     CursorHandler,
-	"direction":                  DirectionHandler,
-	"display":                    DisplayHandler,
-	"empty-cells":                EmptyCellsHandler,
-	"filter":                     FilterHandler,
-	"flex":                       FlexHandler,
-	"flex-basis":                 FlexBasisHandler,
-	"flex-direction":             FlexDirectionHandler,
-	"flex-flow":                  FlexFlowHandler,
-	"flex-grow":                  FlexGrowHandler,
-	"flex-shrink":                FlexGrowHandler,
-	"flex-wrap":                  FlexWrapHandler,
-	"float":                      FloatHandler,
-	"font":                       FontHandler,
-	"font-family":                FontFamilyHandler,
-	"font-kerning":               FontKerningHandler,
-	"font-language-override":     FontLanguageOverrideHandler,
-	"font-size":                  FontSizeHandler,
-	"font-size-adjust":           FontSizeAdjustHandler,
-	"font-stretch":               FontStretchHandler,
-	"font-style":                 FontStyleHandler,
-	"font-synthesis":             FontSynthesisHandler,
-	"font-variant":               FontVariantHandler,
-	"font-variant-caps":          FontVariantCapsHandler,
-	"font-variant-position":      FontVariantPositionHandler,
-	"font-weight":                FontWeightHandler,
-	"grid":                       GridHandler,
-	"grid-area":                  GridAreaHandler,
-	"grid-auto-columns":          GridAutoColumnsHandler,
-	"grid-auto-flow":             GridAutoFlowHandler,
-	"grid-auto-rows":             GridAutoColumnsHandler,
-	"grid-column":                GridColumnHandler,
-	"grid-column-end":            GridAxisStartEndHandler,
-	"grid-column-gap":            LengthHandler,
-	"grid-column-start":          GridAxisStartEndHandler,
-	"grid-gap":                   GridGapHandler,
-	"grid-row":                   GridRowHandler,
-	"grid-row-end":               GridAxisStartEndHandler,
-	"grid-row-gap":               LengthHandler,
-	"grid-row-start":             GridAxisStartEndHandler,
-	"grid-template":              GridTemplateHandler,
-	"grid-template-areas":        GridTemplateAreasHandler,
-	"grid-template-columns":      GridTemplateColumnsHandler,
-	"grid-template-rows":         GridTemplateRowsHandler,
-	"hanging-punctuation":        HangingPunctuationHandler,
-	"height":                     HeightHandler,
-	"hyphens":                    HyphensHandler,
-	"image-rendering":            ImageRenderingHandler,
-	"isolation":                  IsolationHandler,
-	"justify-content":            JustifyContentHandler,
-	"left":                       SideHandler,
-	"letter-spacing":             LetterSpacingHandler,
-	"line-break":                 LineBreakHandler,
-	"line-height":                LineHeightHandler,
-	"list-style":                 ListStyleHandler,
-	"list-style-image":           ImageHandler,
-	"list-style-position":        ListStylePositionHandler,
-	"list-style-type":            ListStyleTypeHandler,
-	"margin":                     MarginHandler,
-	"margin-bottom":              MarginSideHandler,
-	"margin-left":                MarginSideHandler,
-	"margin-right":               MarginSideHandler,
-	"margin-top":                 MarginSideHandler,
-	"max-height":                 MaxHeightWidthHandler,
-	"max-width":                  MaxHeightWidthHandler,
-	"min-height":                 MinHeightWidthHandler,
-	"min-width":                  MinHeightWidthHandler,
-	"mix-blend-mode":             MixBlendModeHandler,
-	"object-fit":                 ObjectFitHandler,
-	"object-position":            ObjectPositionHandler,
-	"opacity":                    OpacityHandler,
-	"order":                      OrderHandler,
-	"orphans":                    OrphansHandler,
-	"outline":                    OutlineHandler,
-	"outline-color":              ColorHandler,
-	"outline-offset":             OutlineOffsetHandler,
-	"outline-style":              OutlineStyleHandler,
-	"outline-width":              OutlineWidthHandler,
-	"overflow":                   OverflowHandler,
-	"overflow-wrap":              OverflowWrapHandler,
-	"overflow-x":                 OverflowXYHandler,
-	"overflow-y":                 OverflowXYHandler,
-	"padding":                    PaddingHandler,
-	"padding-bottom":             PaddingSideHandler,
-	"padding-left":               PaddingSideHandler,
-	"padding-right":              PaddingSideHandler,
-	"padding-top":                PaddingSideHandler,
-	"page-break-after":           PageBreakBeforeAfterHandler,
-	"page-break-before":          PageBreakBeforeAfterHandler,
-	"page-break-inside":          PageBreakInsideHandler,
-	"perspective":                PerspectiveHandler,
-	"perspective-origin":         PerspectiveOriginHandler,
-	"pointer-events":             PointerEventsHandler,
-	"position":                   PositionHandler,
-	"quotes":                     QuotesHandler,
-	"resize":                     ResizeHandler,
-	"right":                      SideHandler,
-	"scroll-behavior":            ScrollBehaviorHandler,
-	"tab-size":                   TabSizeHandler,
-	"table-layout":               TableLayoutHandler,
-	"text-align":                 TextAlignHandler,
-	"text-align-last":            TextAlignLastHandler,
-	"text-combine-upright":       TextCombineUprightHandler,
-	"text-decoration":            TextDecorationHandler,
-	"text-decoration-color":      ColorHandler,
-	"text-decoration-line":       TextDecorationLineHandler,
-	"text-decoration-style":      TextDecorationStyleHandler,
-	"text-indent":                TextIndentHandler,
-	"text-justify":               TextJustifyHandler,
-	"text-orientation":           TextOrientationHandler,
-	"text-overflow":              TextOverflowHandler,
-	"text-shadow":                TextShadowHandler,
-	"text-transform":             TextTransformHandler,
-	"top":                        SideHandler,
-	"transform":                  TransformHandler,
-	"transform-origin":           TransformOriginHandler,
-	"transform-style":            TransformStyleHandler,
-	"transition":                 TransitionHandler,
-	"transition-delay":           TransitionDelayHandler,
-	"transition-duration":        TransitionDurationHandler,
-	"transition-property":        TransitionPropertyHandler,
-	"transition-timing-function": TimingFunctionHandler,
-	"unicode-bidi":               UnicodeBidiHandler,
-	"user-select":                UserSelectHandler,
-	"vertical-align":             VerticalAlignHandler,
-	"visibility":                 VisiblityHandler,
-	"white-space":                WhiteSpaceHandler,
-	"widows":                     OrphansHandler,
-	"width":                      WidthHandler,
-	"word-break":                 WordBreakHandler,
-	"word-spacing":               WordSpacingHandler,
-	"word-wrap":                  WordWrapHandler,
-	"writing-mode":               WritingModeHandler,
-	"z-index":                    ZIndexHandler,
-}
+var (
+	defaultStyleHandlers = map[string]func(string) bool{
+		"align-content":              AlignContentHandler,
+		"align-items":                AlignItemsHandler,
+		"align-self":                 AlignSelfHandler,
+		"all":                        AllHandler,
+		"animation":                  AnimationHandler,
+		"animation-delay":            AnimationDelayHandler,
+		"animation-direction":        AnimationDirectionHandler,
+		"animation-duration":         AnimationDurationHandler,
+		"animation-fill-mode":        AnimationFillModeHandler,
+		"animation-iteration-count":  AnimationIterationCountHandler,
+		"animation-name":             AnimationNameHandler,
+		"animation-play-state":       AnimationPlayStateHandler,
+		"animation-timing-function":  TimingFunctionHandler,
+		"backface-visibility":        BackfaceVisibilityHandler,
+		"background":                 BackgroundHandler,
+		"background-attachment":      BackgroundAttachmentHandler,
+		"background-blend-mode":      BackgroundBlendModeHandler,
+		"background-clip":            BackgroundClipHandler,
+		"background-color":           ColorHandler,
+		"background-image":           ImageHandler,
+		"background-origin":          BackgroundOriginHandler,
+		"background-position":        BackgroundPositionHandler,
+		"background-repeat":          BackgroundRepeatHandler,
+		"background-size":            BackgroundSizeHandler,
+		"border":                     BorderHandler,
+		"border-bottom":              BorderSideHandler,
+		"border-bottom-color":        ColorHandler,
+		"border-bottom-left-radius":  BorderSideRadiusHandler,
+		"border-bottom-right-radius": BorderSideRadiusHandler,
+		"border-bottom-style":        BorderSideStyleHandler,
+		"border-bottom-width":        BorderSideWidthHandler,
+		"border-collapse":            BorderCollapseHandler,
+		"border-color":               ColorHandler,
+		"border-image":               BorderImageHandler,
+		"border-image-outset":        BorderImageOutsetHandler,
+		"border-image-repeat":        BorderImageRepeatHandler,
+		"border-image-slice":         BorderImageSliceHandler,
+		"border-image-source":        ImageHandler,
+		"border-image-width":         BorderImageWidthHandler,
+		"border-left":                BorderSideHandler,
+		"border-left-color":          ColorHandler,
+		"border-left-style":          BorderSideStyleHandler,
+		"border-left-width":          BorderSideWidthHandler,
+		"border-radius":              BorderRadiusHandler,
+		"border-right":               BorderSideHandler,
+		"border-right-color":         ColorHandler,
+		"border-right-style":         BorderSideStyleHandler,
+		"border-right-width":         BorderSideWidthHandler,
+		"border-spacing":             BorderSpacingHandler,
+		"border-style":               BorderStyleHandler,
+		"border-top":                 BorderSideHandler,
+		"border-top-color":           ColorHandler,
+		"border-top-left-radius":     BorderSideRadiusHandler,
+		"border-top-right-radius":    BorderSideRadiusHandler,
+		"border-top-style":           BorderSideStyleHandler,
+		"border-top-width":           BorderSideWidthHandler,
+		"border-width":               BorderWidthHandler,
+		"bottom":                     SideHandler,
+		"box-decoration-break":       BoxDecorationBreakHandler,
+		"box-shadow":                 BoxShadowHandler,
+		"box-sizing":                 BoxSizingHandler,
+		"break-after":                BreakBeforeAfterHandler,
+		"break-before":               BreakBeforeAfterHandler,
+		"break-inside":               BreakInsideHandler,
+		"caption-side":               CaptionSideHandler,
+		"caret-color":                CaretColorHandler,
+		"clear":                      ClearHandler,
+		"clip":                       ClipHandler,
+		"color":                      ColorHandler,
+		"column-count":               ColumnCountHandler,
+		"column-fill":                ColumnFillHandler,
+		"column-gap":                 ColumnGapHandler,
+		"column-rule":                ColumnRuleHandler,
+		"column-rule-color":          ColorHandler,
+		"column-rule-style":          BorderSideStyleHandler,
+		"column-rule-width":          ColumnRuleWidthHandler,
+		"column-span":                ColumnSpanHandler,
+		"column-width":               ColumnWidthHandler,
+		"columns":                    ColumnsHandler,
+		"cursor":                     CursorHandler,
+		"direction":                  DirectionHandler,
+		"display":                    DisplayHandler,
+		"empty-cells":                EmptyCellsHandler,
+		"filter":                     FilterHandler,
+		"flex":                       FlexHandler,
+		"flex-basis":                 FlexBasisHandler,
+		"flex-direction":             FlexDirectionHandler,
+		"flex-flow":                  FlexFlowHandler,
+		"flex-grow":                  FlexGrowHandler,
+		"flex-shrink":                FlexGrowHandler,
+		"flex-wrap":                  FlexWrapHandler,
+		"float":                      FloatHandler,
+		"font":                       FontHandler,
+		"font-family":                FontFamilyHandler,
+		"font-kerning":               FontKerningHandler,
+		"font-language-override":     FontLanguageOverrideHandler,
+		"font-size":                  FontSizeHandler,
+		"font-size-adjust":           FontSizeAdjustHandler,
+		"font-stretch":               FontStretchHandler,
+		"font-style":                 FontStyleHandler,
+		"font-synthesis":             FontSynthesisHandler,
+		"font-variant":               FontVariantHandler,
+		"font-variant-caps":          FontVariantCapsHandler,
+		"font-variant-position":      FontVariantPositionHandler,
+		"font-weight":                FontWeightHandler,
+		"grid":                       GridHandler,
+		"grid-area":                  GridAreaHandler,
+		"grid-auto-columns":          GridAutoColumnsHandler,
+		"grid-auto-flow":             GridAutoFlowHandler,
+		"grid-auto-rows":             GridAutoColumnsHandler,
+		"grid-column":                GridColumnHandler,
+		"grid-column-end":            GridAxisStartEndHandler,
+		"grid-column-gap":            LengthHandler,
+		"grid-column-start":          GridAxisStartEndHandler,
+		"grid-gap":                   GridGapHandler,
+		"grid-row":                   GridRowHandler,
+		"grid-row-end":               GridAxisStartEndHandler,
+		"grid-row-gap":               LengthHandler,
+		"grid-row-start":             GridAxisStartEndHandler,
+		"grid-template":              GridTemplateHandler,
+		"grid-template-areas":        GridTemplateAreasHandler,
+		"grid-template-columns":      GridTemplateColumnsHandler,
+		"grid-template-rows":         GridTemplateRowsHandler,
+		"hanging-punctuation":        HangingPunctuationHandler,
+		"height":                     HeightHandler,
+		"hyphens":                    HyphensHandler,
+		"image-rendering":            ImageRenderingHandler,
+		"isolation":                  IsolationHandler,
+		"justify-content":            JustifyContentHandler,
+		"left":                       SideHandler,
+		"letter-spacing":             LetterSpacingHandler,
+		"line-break":                 LineBreakHandler,
+		"line-height":                LineHeightHandler,
+		"list-style":                 ListStyleHandler,
+		"list-style-image":           ImageHandler,
+		"list-style-position":        ListStylePositionHandler,
+		"list-style-type":            ListStyleTypeHandler,
+		"margin":                     MarginHandler,
+		"margin-bottom":              MarginSideHandler,
+		"margin-left":                MarginSideHandler,
+		"margin-right":               MarginSideHandler,
+		"margin-top":                 MarginSideHandler,
+		"max-height":                 MaxHeightWidthHandler,
+		"max-width":                  MaxHeightWidthHandler,
+		"min-height":                 MinHeightWidthHandler,
+		"min-width":                  MinHeightWidthHandler,
+		"mix-blend-mode":             MixBlendModeHandler,
+		"object-fit":                 ObjectFitHandler,
+		"object-position":            ObjectPositionHandler,
+		"opacity":                    OpacityHandler,
+		"order":                      OrderHandler,
+		"orphans":                    OrphansHandler,
+		"outline":                    OutlineHandler,
+		"outline-color":              ColorHandler,
+		"outline-offset":             OutlineOffsetHandler,
+		"outline-style":              OutlineStyleHandler,
+		"outline-width":              OutlineWidthHandler,
+		"overflow":                   OverflowHandler,
+		"overflow-wrap":              OverflowWrapHandler,
+		"overflow-x":                 OverflowXYHandler,
+		"overflow-y":                 OverflowXYHandler,
+		"padding":                    PaddingHandler,
+		"padding-bottom":             PaddingSideHandler,
+		"padding-left":               PaddingSideHandler,
+		"padding-right":              PaddingSideHandler,
+		"padding-top":                PaddingSideHandler,
+		"page-break-after":           PageBreakBeforeAfterHandler,
+		"page-break-before":          PageBreakBeforeAfterHandler,
+		"page-break-inside":          PageBreakInsideHandler,
+		"perspective":                PerspectiveHandler,
+		"perspective-origin":         PerspectiveOriginHandler,
+		"pointer-events":             PointerEventsHandler,
+		"position":                   PositionHandler,
+		"quotes":                     QuotesHandler,
+		"resize":                     ResizeHandler,
+		"right":                      SideHandler,
+		"scroll-behavior":            ScrollBehaviorHandler,
+		"tab-size":                   TabSizeHandler,
+		"table-layout":               TableLayoutHandler,
+		"text-align":                 TextAlignHandler,
+		"text-align-last":            TextAlignLastHandler,
+		"text-combine-upright":       TextCombineUprightHandler,
+		"text-decoration":            TextDecorationHandler,
+		"text-decoration-color":      ColorHandler,
+		"text-decoration-line":       TextDecorationLineHandler,
+		"text-decoration-style":      TextDecorationStyleHandler,
+		"text-indent":                TextIndentHandler,
+		"text-justify":               TextJustifyHandler,
+		"text-orientation":           TextOrientationHandler,
+		"text-overflow":              TextOverflowHandler,
+		"text-shadow":                TextShadowHandler,
+		"text-transform":             TextTransformHandler,
+		"top":                        SideHandler,
+		"transform":                  TransformHandler,
+		"transform-origin":           TransformOriginHandler,
+		"transform-style":            TransformStyleHandler,
+		"transition":                 TransitionHandler,
+		"transition-delay":           TransitionDelayHandler,
+		"transition-duration":        TransitionDurationHandler,
+		"transition-property":        TransitionPropertyHandler,
+		"transition-timing-function": TimingFunctionHandler,
+		"unicode-bidi":               UnicodeBidiHandler,
+		"user-select":                UserSelectHandler,
+		"vertical-align":             VerticalAlignHandler,
+		"visibility":                 VisiblityHandler,
+		"white-space":                WhiteSpaceHandler,
+		"widows":                     OrphansHandler,
+		"width":                      WidthHandler,
+		"word-break":                 WordBreakHandler,
+		"word-spacing":               WordSpacingHandler,
+		"word-wrap":                  WordWrapHandler,
+		"writing-mode":               WritingModeHandler,
+		"z-index":                    ZIndexHandler,
+	}
+	colorValues = []string{"initial", "inherit", "aliceblue", "antiquewhite",
+		"aqua", "aquamarine", "azure", "beige", "bisque", "black",
+		"blanchedalmond", "blue", "blueviolet", "brown", "burlywood",
+		"cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue",
+		"cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod",
+		"darkgray", "darkgrey", "darkgreen", "darkkhaki", "darkmagenta",
+		"darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon",
+		"darkseagreen", "darkslateblue", "darkslategrey", "darkslategray",
+		"darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray",
+		"dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen",
+		"fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray",
+		"grey", "green", "greenyellow", "honeydew", "hotpink", "indianred",
+		"indigo", "ivory", "khaki", "lavender", "lavenderblush",
+		"lemonchiffon", "lightblue", "lightcoral", "lightcyan",
+		"lightgoldenrodyellow", "lightgray", "lightgrey", "lightgreen",
+		"lightpink", "lightsalmon", "lightseagreen", "lightskyblue",
+		"lightslategray", "lightslategrey", "lightsteeelblue", "lightyellow",
+		"lime", "limegreen", "linen", "magenta", "maroon", "mediumaquamarine",
+		"mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen",
+		"mediumslateblue", "mediumspringgreen", "mediumturquoise",
+		"mediumvioletred", "midnightblue", "mintcream", "mistyrose",
+		"moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab",
+		"orange", "orangered", "orchid", "palegoldenrod", "palegreen",
+		"paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru",
+		"pink", "plum", "powderblue", "purple", "rebeccapurple", "red",
+		"rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown",
+		"seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue",
+		"slategray", "slategrey", "snow", "springgreen", "steelblue", "tan",
+		"teal", "thistle", "tomato", "turquoise", "violet", "wheat", "white",
+		"whitesmoke", "yellow", "yellowgreen"}
+)
 
 func multiSplit(value string, seps ...string) []string {
 	curArray := []string{value}
@@ -328,7 +388,8 @@ func AnimationHandler(value string) bool {
 
 func AnimationDelayHandler(value string) bool {
 	reg := regexp.MustCompile(`[\-]?[0-9]+[\.]?[0-9]*[s|ms]?`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -344,7 +405,8 @@ func AnimationDirectionHandler(value string) bool {
 
 func AnimationDurationHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+[\.]?[0-9]*[s|ms]?`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -360,7 +422,8 @@ func AnimationFillModeHandler(value string) bool {
 
 func AnimationIterationCountHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+[\.]?[0-9]*`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"infinite", "initial", "inherit"}
@@ -370,7 +433,8 @@ func AnimationIterationCountHandler(value string) bool {
 
 func AnimationNameHandler(value string) bool {
 	reg := regexp.MustCompile(`[a-z]+`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func AnimationPlayStateHandler(value string) bool {
@@ -386,11 +450,13 @@ func TimingFunctionHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`cubic-bezier\(([ ]*(0(.[0-9]+)?|1(.0)?),){3}[ ]*(0(.[0-9]+)?|1)\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`steps\([ ]*[0-9]+([ ]*,[ ]*(start|end)?)\)`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func BackfaceVisibilityHandler(value string) bool {
@@ -452,7 +518,8 @@ func ImageHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`url\([\"\']?((https|http)[a-z0-9\.\\/_:]+[\"\']?)\)`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func BackgroundOriginHandler(value string) bool {
@@ -468,7 +535,8 @@ func BackgroundPositionHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`[\-]*[0-9]+[cm|mm|in|px|pt|pc\%]* [[\-]*[0-9]+[cm|mm|in|px|pt|pc\%]*]*`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	return false
@@ -523,16 +591,24 @@ func BorderSideHandler(value string) bool {
 }
 
 func BorderSideRadiusHandler(value string) bool {
-	if LengthHandler(value) {
+	splitVals := strings.Split(value, " ")
+	valid := true
+	for _, i := range splitVals {
+		if !LengthHandler(i) {
+			valid = false
+			break
+		}
+	}
+	if valid {
 		return true
 	}
-	splitVals := splitValues(value)
+	splitVals = splitValues(value)
 	values := []string{"initial", "inherit"}
 	return in(splitVals, values)
 }
 
 func BorderSideStyleHandler(value string) bool {
-	values := []string{"none", "hidden", "dotted", "dashed", "solid", "doble", "groove", "ridge", "inset", "outset", "initial", "inherit"}
+	values := []string{"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "initial", "inherit"}
 	splitVals := splitValues(value)
 	return in(splitVals, values)
 }
@@ -557,7 +633,7 @@ func BorderImageHandler(value string) bool {
 	if in([]string{value}, values) {
 		return true
 	}
-	splitVals := multiSplit(value, " ", "/")
+	splitVals := multiSplit(value, " ", " / ")
 	usedFunctions := []func(string) bool{
 		ImageHandler,
 		BorderImageSliceHandler,
@@ -735,29 +811,32 @@ func CaptionSideHandler(value string) bool {
 }
 
 func CaretColorHandler(value string) bool {
-	values := []string{"auto", "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgrey", "darkgreen", "darkkhaki", "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue", "darkslategrey", "darkslategray", "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "grey", "green", "greenyellow", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush", "lemonchiffon", "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray", "lightgrey", "lightgreen", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightslategrey", "lightsteeelblue", "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "slategrey", "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow", "yellowgreen"}
 	splitVals := splitValues(value)
-	if in(splitVals, values) {
+	if in(splitVals, colorValues) {
 		return true
 	}
 	reg := regexp.MustCompile(`#[0-9abcdef]{6}`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`rgb\(([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))),){2}([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`rgba\(([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))),){3}[ ]*(1(\.0)?|0|(0\.[0-9]+))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`hsl\([ ]*([012]?[0-9]{1,2}|3[0-5][0-9]|360),[ ]*([0-9]{0,2}|100)\%,[ ]*([0-9]{0,2}|100)\%\)`)
-	if reg.MatchString(value) {
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`hsla\(([ ]*[012]?[0-9]{1,2}|3[0-5][0-9]|360),[ ]*([0-9]{0,2}|100)\%,[ ]*([0-9]{0,2}|100)\%,[ ]*(1|1\.0|0|(0\.[0-9]+))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	return false
@@ -771,7 +850,8 @@ func ClearHandler(value string) bool {
 
 func ClipHandler(value string) bool {
 	reg := regexp.MustCompile(`rect\([0-9]+px,[ ]*[0-9]+px,[ ]*[0-9]+px,[ ]*[0-9]+px\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"auto", "initial", "inherit"}
@@ -780,29 +860,33 @@ func ClipHandler(value string) bool {
 }
 
 func ColorHandler(value string) bool {
-	values := []string{"initial", "inherit", "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgrey", "darkgreen", "darkkhaki", "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue", "darkslategrey", "darkslategray", "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "grey", "green", "greenyellow", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush", "lemonchiffon", "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray", "lightgrey", "lightgreen", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightslategrey", "lightsteeelblue", "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "slategrey", "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow", "yellowgreen"}
 	splitVals := splitValues(value)
-	if in(splitVals, values) {
+	if in(splitVals, colorValues) {
 		return true
 	}
 	reg := regexp.MustCompile(`#[0-9abcdef]{6}`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`rgb\(([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))),){2}([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`rgba\(([ ]*((([0-9]{1,2}|100)\%)|(([01]?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5]))),){3}[ ]*(1(\.0)?|0|(0\.[0-9]+))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`hsl\([ ]*([012]?[0-9]{1,2}|3[0-5][0-9]|360),[ ]*([0-9]{0,2}|100)\%,[ ]*([0-9]{0,2}|100)\%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`hsla\(([ ]*[012]?[0-9]{1,2}|3[0-5][0-9]|360),[ ]*([0-9]{0,2}|100)\%,[ ]*([0-9]{0,2}|100)\%,[ ]*(1|1\.0|0|(0\.[0-9]+))\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	return false
@@ -810,7 +894,8 @@ func ColorHandler(value string) bool {
 
 func ColumnCountHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"auto", "initial", "inherit"}
@@ -915,40 +1000,49 @@ func FilterHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`blur\([0-9]+px\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`(brightness|contrast)\([0-9]+\%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`drop-shadow\(([-]?[0-9]+px) ([-]?[0-9]+px)( [-]?[0-9]+px)?( ([-]?[0-9]+px))?`)
+	reg.Longest()
 	colorValue := strings.TrimSuffix(string(reg.ReplaceAll([]byte(value), []byte{})), ")")
 	if ColorHandler(colorValue) {
 		return true
 	}
 	reg = regexp.MustCompile(`grayscale\(([0-9]{1,2}|100)%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`hue-rotate\(([12]?[0-9]{1,2}|3[0-5][0-9]|360)?\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`invert\(([0-9]{1,2}|100)%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`opacity\(([0-9]{1,2}|100)%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`saturate\([0-9]+%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`sepia\(([0-9]{1,2}|100)%\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	//Not allowing URLs
@@ -998,7 +1092,8 @@ func FlexFlowHandler(value string) bool {
 
 func FlexGrowHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9\.]+`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	splitVals := strings.Split(value, ";")
@@ -1049,8 +1144,10 @@ func FontFamilyHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`('[a-z ]+'|[a-z]+)`)
+	reg.Longest()
 	for _, i := range splitVals {
-		if !reg.MatchString(i) {
+		i = strings.TrimSpace(i)
+		if reg.FindString(i) != i {
 			return false
 		}
 	}
@@ -1065,7 +1162,8 @@ func FontKerningHandler(value string) bool {
 
 func FontLanguageOverrideHandler(value string) bool {
 	reg := regexp.MustCompile(`[a-z]+`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func FontSizeHandler(value string) bool {
@@ -1079,7 +1177,8 @@ func FontSizeHandler(value string) bool {
 
 func FontSizeAdjustHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+[\.]?[0-9]*`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"auto", "initial", "inherit"}
@@ -1199,7 +1298,8 @@ func GridColumnGapHandler(value string) bool {
 
 func LengthHandler(value string) bool {
 	reg := regexp.MustCompile(`[\-]?[0-9]+[\.]?[0-9]*(%|cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|deg|rad|turn)?`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func LineBreakHandler(value string) bool {
@@ -1210,11 +1310,11 @@ func LineBreakHandler(value string) bool {
 
 func GridAxisStartEndHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+`)
-	if reg.MatchString(value) {
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`span [0-9]+`)
-	if reg.MatchString(value) {
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"auto"}
@@ -1266,7 +1366,8 @@ func GridTemplateAreasHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`['"]?[a-z ]+['"]?`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func GridTemplateColumnsHandler(value string) bool {
@@ -1450,7 +1551,8 @@ func ObjectPositionHandler(value string) bool {
 
 func OpacityHandler(value string) bool {
 	reg := regexp.MustCompile("(0[.]?[0-9]*)|(1.0)")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -1460,7 +1562,8 @@ func OpacityHandler(value string) bool {
 
 func OrderHandler(value string) bool {
 	reg := regexp.MustCompile("[0-9]+")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -1526,7 +1629,8 @@ func OverflowWrapHandler(value string) bool {
 
 func OrphansHandler(value string) bool {
 	reg := regexp.MustCompile(`[0-9]+`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func PaddingHandler(value string) bool {
@@ -1612,7 +1716,8 @@ func QuotesHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`([ ]*["'][\x{0022}\x{0027}\x{2039}\x{2039}\x{203A}\x{00AB}\x{00BB}\x{2018}\x{2019}\x{201C}-\x{201E}]["'] ["'][\x{0022}\x{0027}\x{2039}\x{2039}\x{203A}\x{00AB}\x{00BB}\x{2018}\x{2019}\x{201C}-\x{201E}]["'])+`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func ResizeHandler(value string) bool {
@@ -1661,7 +1766,8 @@ func TextCombineUprightHandler(value string) bool {
 		return true
 	}
 	reg := regexp.MustCompile(`digits [2-4]`)
-	return reg.MatchString(value)
+	reg.Longest()
+	return reg.FindString(value) == value && value != ""
 }
 
 func TextDecorationHandler(value string) bool {
@@ -1707,7 +1813,8 @@ func TextJustifyHandler(value string) bool {
 
 func TextOverflowHandler(value string) bool {
 	reg := regexp.MustCompile("[\"'][a-z]+[\"']")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"clip", "ellipsis", "initial", "inherit"}
@@ -1755,21 +1862,22 @@ func TextTransformHandler(value string) bool {
 	return in(splitVals, values)
 }
 
-//TODO2 implement handler for transform
 func TransformHandler(value string) bool {
 	values := []string{"none", "initial", "inherit"}
 	if in([]string{value}, values) {
 		return true
 	}
 	reg := regexp.MustCompile(`matrix\(([ ]*[0-9]+[\.]?[0-9]*,){5}([ ]*[0-9]+[\.]?[0-9]*)\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`matrix3d\(([ ]*[0-9]+[\.]?[0-9]*,){15}([ ]*[0-9]+[\.]?[0-9]*)\)`)
-	if reg.MatchString(value) {
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`(translate|translate3d|translatex|translatey|translatez|scale|scale3d|scalex|scaley|scalez)\(`)
+	reg.Longest()
 	subValue := string(reg.ReplaceAll([]byte(value), []byte{}))
 	trimValue := strings.Split(strings.TrimSuffix(subValue, ")"), ",")
 	valid := true
@@ -1779,18 +1887,21 @@ func TransformHandler(value string) bool {
 			break
 		}
 	}
-	if valid {
+	if valid && trimValue != nil {
 		return true
 	}
 	reg = regexp.MustCompile(`rotate(x|y|z)?\(([12]?|3[0-5][0-9]|360)\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`rotate3d\(([ ]?(1(\.0)?|0\.[0-9]+),){3}([12]?|3[0-5][0-9]|360)\)`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	reg = regexp.MustCompile(`skew(x|y)?\(`)
+	reg.Longest()
 	subValue = string(reg.ReplaceAll([]byte(value), []byte{}))
 	subValue = strings.TrimSuffix(subValue, ")")
 	trimValue = strings.Split(subValue, ",")
@@ -1805,7 +1916,9 @@ func TransformHandler(value string) bool {
 		return true
 	}
 	reg = regexp.MustCompile(`perspective\(`)
+	reg.Longest()
 	subValue = string(reg.ReplaceAll([]byte(value), []byte{}))
+	subValue = strings.TrimSuffix(subValue, ")")
 	return LengthHandler(subValue)
 }
 
@@ -1860,7 +1973,8 @@ func TransitionHandler(value string) bool {
 
 func TransitionDelayHandler(value string) bool {
 	reg := regexp.MustCompile("[0-9]+[.]?[0-9]*(s|ms)?")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -1870,7 +1984,8 @@ func TransitionDelayHandler(value string) bool {
 
 func TransitionDurationHandler(value string) bool {
 	reg := regexp.MustCompile("[0-9]+[.]?[0-9]*(s|ms)?")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"initial", "inherit"}
@@ -1880,7 +1995,8 @@ func TransitionDurationHandler(value string) bool {
 
 func TransitionPropertyHandler(value string) bool {
 	reg := regexp.MustCompile("([a-zA-Z]+,[ ]?)*[a-zA-Z]+")
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"none", "all", "initial", "inherit"}
@@ -1959,7 +2075,8 @@ func WritingModeHandler(value string) bool {
 
 func ZIndexHandler(value string) bool {
 	reg := regexp.MustCompile(`[\-]?[0-9]+`)
-	if reg.MatchString(value) {
+	reg.Longest()
+	if reg.FindString(value) == value && value != "" {
 		return true
 	}
 	values := []string{"auto", "initial", "inherit"}

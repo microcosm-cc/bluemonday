@@ -92,7 +92,7 @@ func main() {
 	// Do this once for each unique policy, and use the policy for the life of the program
 	// Policy creation/editing is not safe to use in multiple goroutines
 	p := bluemonday.UGCPolicy()
-	
+
 	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
 	html := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
@@ -208,7 +208,9 @@ p.AllowElements("fieldset", "select", "option")
 
 Although it's possible to handle inline CSS using `AllowAttrs` with a `Matching` rule, writing a single monolithic regular expression to safely process all inline CSS which you wish to allow is not a trivial task.  Instead of attempting to do so, you can whitelist the `style` attribute on whichever element(s) you desire and use style policies to control and sanitize inline styles.
 
-As noted above for HTML attributes, it's **always** recommended that you use either `Matching` (with a suitable regular expression) or `MatchingEnum` to ensure that the value is safe. 
+It is suggested that you use `Matching` (with a suitable regular expression)
+`MatchingEnum`, or `MatchingHandler` to ensure each style matches your needs,
+but default handlers are supplied for most widely used styles.
 
 Similar to attributes, you can allow specific CSS properties to be set inline:
 ```go
@@ -223,6 +225,17 @@ p.AllowAttrs("style").OnElements("span", "p")
 // Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
 // on 'span' elements only
 p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElements("span")
+```
+If you need more specific checking, you can create a handler that takes in a string and returns a bool to
+validate the values for a given property. The string parameter has been
+converted to lowercase and unicode code points have been converted.
+```go
+myHandler := func(value string) bool{
+	return true
+}
+p.AllowAttrs("style").OnElements("span", "p")
+// Allow the 'color' property with values validated by the handler (on any element allowed a 'style' attribute)
+p.AllowStyles("color").MatchingHandler(myHandler).Globally()
 ```
 
 ### Links

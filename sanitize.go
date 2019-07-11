@@ -34,6 +34,7 @@ import (
 	"io"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -45,6 +46,7 @@ var (
 	dataAttribute             = regexp.MustCompile("^data-.+")
 	dataAttributeXMLPrefix    = regexp.MustCompile("^xml.+")
 	dataAttributeInvalidChars = regexp.MustCompile("[A-Z;]+")
+	cssUnicodeChar            = regexp.MustCompile(`\\[0-9a-f]{1,6} ?`)
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
@@ -542,7 +544,7 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 	for _, dec := range decs {
 		addedProperty := false
 		tempProperty := strings.ToLower(dec.Property)
-		tempValue := strings.ToLower(dec.Value)
+		tempValue := removeUnicode(strings.ToLower(dec.Value))
 		for _, i := range prefixes {
 			tempProperty = strings.TrimPrefix(tempProperty, i)
 		}
@@ -678,4 +680,35 @@ func isDataAttribute(val string) bool {
 		return false
 	}
 	return true
+}
+
+func removeUnicode(value string) string {
+	substitutedValue := value
+	currentLoc := cssUnicodeChar.FindStringIndex(substitutedValue)
+	for currentLoc != nil {
+
+		character := substitutedValue[currentLoc[0]+1 : currentLoc[1]]
+		character = strings.TrimSpace(character)
+		if len(character) < 4 {
+			character = strings.Repeat("0", 4-len(character)) + character
+		} else {
+			for len(character) > 4 {
+				if character[0] != '0' {
+					character = ""
+					break
+				} else {
+					character = character[1:]
+				}
+			}
+		}
+		character = "\\u" + character
+		translatedChar, err := strconv.Unquote(`"` + character + `"`)
+		translatedChar = strings.TrimSpace(translatedChar)
+		if err != nil {
+			return ""
+		}
+		substitutedValue = substitutedValue[0:currentLoc[0]] + translatedChar + substitutedValue[currentLoc[1]:]
+		currentLoc = cssUnicodeChar.FindStringIndex(substitutedValue)
+	}
+	return substitutedValue
 }
