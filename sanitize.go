@@ -137,7 +137,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 		case html.StartTagToken:
 
-			mostRecentlyStartedToken = token.Data
+			mostRecentlyStartedToken = strings.ToLower(token.Data)
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
@@ -172,7 +172,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 		case html.EndTagToken:
 
-			if mostRecentlyStartedToken == token.Data {
+			if mostRecentlyStartedToken == strings.ToLower(token.Data) {
 				mostRecentlyStartedToken = ""
 			}
 
@@ -232,7 +232,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.TextToken:
 
 			if !skipElementContent {
-				switch strings.ToLower(mostRecentlyStartedToken) {
+				switch mostRecentlyStartedToken {
 				case "script":
 					// not encouraged, but if a policy allows JavaScript we
 					// should not HTML escape it as that would break the output
