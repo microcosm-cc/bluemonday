@@ -92,7 +92,7 @@ func main() {
 	// Do this once for each unique policy, and use the policy for the life of the program
 	// Policy creation/editing is not safe to use in multiple goroutines
 	p := bluemonday.UGCPolicy()
-	
+
 	// The policy can then be used to sanitize lots of input and it is safe to use the policy in multiple goroutines
 	html := p.Sanitize(
 		`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`,
@@ -202,6 +202,40 @@ And you can take any existing policy and extend it:
 ```go
 p := bluemonday.UGCPolicy()
 p.AllowElements("fieldset", "select", "option")
+```
+
+### Inline CSS
+
+Although it's possible to handle inline CSS using `AllowAttrs` with a `Matching` rule, writing a single monolithic regular expression to safely process all inline CSS which you wish to allow is not a trivial task.  Instead of attempting to do so, you can whitelist the `style` attribute on whichever element(s) you desire and use style policies to control and sanitize inline styles.
+
+It is suggested that you use `Matching` (with a suitable regular expression)
+`MatchingEnum`, or `MatchingHandler` to ensure each style matches your needs,
+but default handlers are supplied for most widely used styles.
+
+Similar to attributes, you can allow specific CSS properties to be set inline:
+```go
+p.AllowAttrs("style").OnElements("span", "p")
+// Allow the 'color' property with valid RGB(A) hex values only (on any element allowed a 'style' attribute)
+p.AllowStyles("color").Matching(regexp.MustCompile("(?i)^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$")).Globally()
+```
+
+Additionally, you can allow a CSS property to be set only to an allowed value:
+```go
+p.AllowAttrs("style").OnElements("span", "p")
+// Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
+// on 'span' elements only
+p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElements("span")
+```
+If you need more specific checking, you can create a handler that takes in a string and returns a bool to
+validate the values for a given property. The string parameter has been
+converted to lowercase and unicode code points have been converted.
+```go
+myHandler := func(value string) bool{
+	return true
+}
+p.AllowAttrs("style").OnElements("span", "p")
+// Allow the 'color' property with values validated by the handler (on any element allowed a 'style' attribute)
+p.AllowStyles("color").MatchingHandler(myHandler).Globally()
 ```
 
 ### Links

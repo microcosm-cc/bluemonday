@@ -34,15 +34,19 @@ import (
 	"io"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
+
+	cssparser "github.com/chris-ramon/douceur/parser"
 )
 
 var (
 	dataAttribute             = regexp.MustCompile("^data-.+")
 	dataAttributeXMLPrefix    = regexp.MustCompile("^xml.+")
 	dataAttributeInvalidChars = regexp.MustCompile("[A-Z;]+")
+	cssUnicodeChar            = regexp.MustCompile(`\\[0-9a-f]{1,6} ?`)
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
@@ -228,7 +232,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.TextToken:
 
 			if !skipElementContent {
-				switch mostRecentlyStartedToken {
+				switch strings.ToLower(mostRecentlyStartedToken) {
 				case "script":
 					// not encouraged, but if a policy allows JavaScript we
 					// should not HTML escape it as that would break the output
@@ -242,6 +246,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					buff.WriteString(token.String())
 				}
 			}
+
 		default:
 			// A token that didn't exist in the html package when we wrote this
 			return &bytes.Buffer{}
@@ -262,6 +267,12 @@ func (p *Policy) sanitizeAttrs(
 		return attrs
 	}
 
+	hasStylePolicies := false
+	sps, elementHasStylePolicies := p.elsAndStyles[elementName]
+	if len(p.globalStyles) > 0 || (elementHasStylePolicies && len(sps) > 0) {
+		hasStylePolicies = true
+	}
+
 	// Builds a new attribute slice based on the whether the attribute has been
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
@@ -273,6 +284,19 @@ func (p *Policy) sanitizeAttrs(
 				continue
 			}
 		}
+		// Is this a "style" attribute, and if so, do we need to sanitize it?
+		if htmlAttr.Key == "style" && hasStylePolicies {
+			htmlAttr = p.sanitizeStyles(htmlAttr, elementName)
+			if htmlAttr.Val == "" {
+				// We've sanitized away any and all styles; don't bother to
+				// output the style attribute (even if it's allowed)
+				continue
+			} else {
+				cleanAttrs = append(cleanAttrs, htmlAttr)
+				continue
+			}
+		}
+
 		// Is there an element specific attribute policy that applies?
 		if ap, ok := aps[htmlAttr.Key]; ok {
 			if ap.regexp != nil {
@@ -501,6 +525,74 @@ func (p *Policy) sanitizeAttrs(
 	return cleanAttrs
 }
 
+func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.Attribute {
+	sps := p.elsAndStyles[elementName]
+
+	//Add semi-colon to end to fix parsing issue
+	if len(attr.Val) > 0 && attr.Val[len(attr.Val)-1] != ';' {
+		attr.Val = attr.Val + ";"
+	}
+	decs, err := cssparser.ParseDeclarations(attr.Val)
+	if err != nil {
+		attr.Val = ""
+		return attr
+	}
+
+	clean := []string{}
+	prefixes := []string{"-webkit-", "-moz-", "-ms-", "-o-", "mso-", "-xv-", "-atsc-", "-wap-", "-khtml-", "prince-", "-ah-", "-hp-", "-ro-", "-rim-", "-tc-"}
+
+	for _, dec := range decs {
+		addedProperty := false
+		tempProperty := strings.ToLower(dec.Property)
+		tempValue := removeUnicode(strings.ToLower(dec.Value))
+		for _, i := range prefixes {
+			tempProperty = strings.TrimPrefix(tempProperty, i)
+		}
+		if sp, ok := sps[tempProperty]; ok {
+			if sp.handler != nil {
+				if sp.handler(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+			} else if len(sp.enum) > 0 {
+				if stringInSlice(tempValue, sp.enum) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+			} else if sp.regexp != nil {
+				if sp.regexp.MatchString(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+					addedProperty = true
+				}
+				continue
+			}
+		}
+
+		if sp, ok := p.globalStyles[tempProperty]; ok && !addedProperty {
+			if sp.handler != nil {
+				if sp.handler(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+			} else if len(sp.enum) > 0 {
+				if stringInSlice(tempValue, sp.enum) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+			} else if sp.regexp != nil {
+				if sp.regexp.MatchString(tempValue) {
+					clean = append(clean, dec.Property+": "+dec.Value)
+				}
+				continue
+			}
+		}
+	}
+	if len(clean) > 0 {
+		attr.Val = strings.Join(clean, "; ")
+	} else {
+		attr.Val = ""
+	}
+	return attr
+}
+
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
 	return ok
@@ -530,6 +622,7 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 			urlPolicy, ok := p.allowURLSchemes[u.Scheme]
 			if !ok {
 				return "", false
+
 			}
 
 			if urlPolicy == nil || urlPolicy(u) == true {
@@ -560,6 +653,16 @@ func linkable(elementName string) bool {
 	}
 }
 
+// stringInSlice returns true if needle exists in haystack
+func stringInSlice(needle string, haystack []string) bool {
+	for _, straw := range haystack {
+		if strings.ToLower(straw) == strings.ToLower(needle) {
+			return true
+		}
+	}
+	return false
+}
+
 func isDataAttribute(val string) bool {
 	if !dataAttribute.MatchString(val) {
 		return false
@@ -577,4 +680,35 @@ func isDataAttribute(val string) bool {
 		return false
 	}
 	return true
+}
+
+func removeUnicode(value string) string {
+	substitutedValue := value
+	currentLoc := cssUnicodeChar.FindStringIndex(substitutedValue)
+	for currentLoc != nil {
+
+		character := substitutedValue[currentLoc[0]+1 : currentLoc[1]]
+		character = strings.TrimSpace(character)
+		if len(character) < 4 {
+			character = strings.Repeat("0", 4-len(character)) + character
+		} else {
+			for len(character) > 4 {
+				if character[0] != '0' {
+					character = ""
+					break
+				} else {
+					character = character[1:]
+				}
+			}
+		}
+		character = "\\u" + character
+		translatedChar, err := strconv.Unquote(`"` + character + `"`)
+		translatedChar = strings.TrimSpace(translatedChar)
+		if err != nil {
+			return ""
+		}
+		substitutedValue = substitutedValue[0:currentLoc[0]] + translatedChar + substitutedValue[currentLoc[1]:]
+		currentLoc = cssUnicodeChar.FindStringIndex(substitutedValue)
+	}
+	return substitutedValue
 }
