@@ -53,13 +53,21 @@ type Policy struct {
 	// tag is replaced by a space character.
 	addSpaces bool
 
-	// When true, add rel="nofollow" to HTML anchors
+	// When true, add rel="nofollow" to HTML a, area, and link tags
 	requireNoFollow bool
 
-	// When true, add rel="nofollow" to HTML anchors
+	// When true, add rel="nofollow" to HTML a, area, and link tags
 	// Will add for href="http://foo"
 	// Will skip for href="/foo" or href="foo"
 	requireNoFollowFullyQualifiedLinks bool
+
+	// When true, add rel="noreferrer" to HTML a, area, and link tags
+	requireNoReferrer bool
+
+	// When true, add rel="noreferrer" to HTML a, area, and link tags
+	// Will add for href="http://foo"
+	// Will skip for href="/foo" or href="foo"
+	requireNoReferrerFullyQualifiedLinks bool
 
 	// When true add target="_blank" to fully qualified links
 	// Will add for href="http://foo"
@@ -422,8 +430,8 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 	return p
 }
 
-// RequireNoFollowOnLinks will result in all <a> tags having a rel="nofollow"
-// added to them if one does not already exist
+// RequireNoFollowOnLinks will result in all a, area, link tags having a
+// rel="nofollow"added to them if one does not already exist
 //
 // Note: This requires p.RequireParseableURLs(true) and will enable it.
 func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
@@ -434,9 +442,10 @@ func (p *Policy) RequireNoFollowOnLinks(require bool) *Policy {
 	return p
 }
 
-// RequireNoFollowOnFullyQualifiedLinks will result in all <a> tags that point
-// to a non-local destination (i.e. starts with a protocol and has a host)
-// having a rel="nofollow" added to them if one does not already exist
+// RequireNoFollowOnFullyQualifiedLinks will result in all a, area, and link
+// tags that point to a non-local destination (i.e. starts with a protocol and
+// has a host) having a rel="nofollow" added to them if one does not already
+// exist
 //
 // Note: This requires p.RequireParseableURLs(true) and will enable it.
 func (p *Policy) RequireNoFollowOnFullyQualifiedLinks(require bool) *Policy {
@@ -447,9 +456,35 @@ func (p *Policy) RequireNoFollowOnFullyQualifiedLinks(require bool) *Policy {
 	return p
 }
 
-// AddTargetBlankToFullyQualifiedLinks will result in all <a> tags that point
-// to a non-local destination (i.e. starts with a protocol and has a host)
-// having a target="_blank" added to them if one does not already exist
+// RequireNoReferrerOnLinks will result in all a, area, and link tags having a
+// rel="noreferrrer" added to them if one does not already exist
+//
+// Note: This requires p.RequireParseableURLs(true) and will enable it.
+func (p *Policy) RequireNoReferrerOnLinks(require bool) *Policy {
+
+	p.requireNoReferrer = require
+	p.requireParseableURLs = true
+
+	return p
+}
+
+// RequireNoReferrerOnFullyQualifiedLinks will result in all a, area, and link
+// tags that point to a non-local destination (i.e. starts with a protocol and
+// has a host) having a rel="noreferrer" added to them if one does not already
+// exist
+//
+// Note: This requires p.RequireParseableURLs(true) and will enable it.
+func (p *Policy) RequireNoReferrerOnFullyQualifiedLinks(require bool) *Policy {
+
+	p.requireNoReferrerFullyQualifiedLinks = require
+	p.requireParseableURLs = true
+
+	return p
+}
+
+// AddTargetBlankToFullyQualifiedLinks will result in all a, area and link tags
+// that point to a non-local destination (i.e. starts with a protocol and has a
+// host) having a target="_blank" added to them if one does not already exist
 //
 // Note: This requires p.RequireParseableURLs(true) and will enable it.
 func (p *Policy) AddTargetBlankToFullyQualifiedLinks(require bool) *Policy {

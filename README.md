@@ -272,6 +272,13 @@ Regardless of whether you have enabled parseable URLs, you can force all URLs to
 p.RequireNoFollowOnLinks(true)
 ```
 
+Similarly, you can force all URLs to have "noreferrer" in their rel attribute.
+```go
+// This applies to "a" "area" "link" elements that have a "href" attribute
+p.RequireNoReferrerOnLinks(true)
+```
+
+
 We provide a convenience method that applies all of the above, but you will still need to whitelist the linkable elements for the URL rules to be applied to:
 ```go
 p.AllowStandardURLs()
