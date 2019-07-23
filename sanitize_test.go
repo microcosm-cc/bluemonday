@@ -1586,3 +1586,75 @@ func TestIssue55ScriptTags(t *testing.T) {
 		)
 	}
 }
+
+func TestIssue85NoReferrer(t *testing.T) {
+	p := UGCPolicy()
+	p.AllowAttrs("rel").OnElements("a")
+	p.RequireNoReferrerOnLinks(true)
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+	p.AllowAttrs("target").Matching(Paragraph).OnElements("a")
+
+	tests := []test{
+		{
+			in:       `<a href="/path" />`,
+			expected: `<a href="/path" rel="nofollow noreferrer"/>`,
+		},
+		{
+			in:       `<a href="/path" target="_blank" />`,
+			expected: `<a href="/path" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="/path" target="foo" />`,
+			expected: `<a href="/path" target="foo" rel="nofollow noreferrer"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" />`,
+			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" target="_blank"/>`,
+			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="nofollow"/>`,
+			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="noopener"/>`,
+			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="noopener nofollow" />`,
+			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" target="foo" />`,
+			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="external"/>`,
+			expected: `<a href="https://www.google.com/" rel="external nofollow noreferrer noopener" target="_blank"/>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

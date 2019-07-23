@@ -378,6 +378,8 @@ func (p *Policy) sanitizeAttrs(
 
 		if (p.requireNoFollow ||
 			p.requireNoFollowFullyQualifiedLinks ||
+			p.requireNoReferrer ||
+			p.requireNoReferrerFullyQualifiedLinks ||
 			p.addTargetBlankToFullyQualifiedLinks) &&
 			len(cleanAttrs) > 0 {
 
@@ -405,11 +407,15 @@ func (p *Policy) sanitizeAttrs(
 				if hrefFound {
 					var (
 						noFollowFound    bool
+						noReferrerFound  bool
 						targetBlankFound bool
 					)
 
 					addNoFollow := (p.requireNoFollow ||
 						externalLink && p.requireNoFollowFullyQualifiedLinks)
+
+					addNoReferrer := (p.requireNoReferrer ||
+						externalLink && p.requireNoReferrerFullyQualifiedLinks)
 
 					addTargetBlank := (externalLink &&
 						p.addTargetBlankToFullyQualifiedLinks)
@@ -418,18 +424,18 @@ func (p *Policy) sanitizeAttrs(
 					for _, htmlAttr := range cleanAttrs {
 
 						var appended bool
-						if htmlAttr.Key == "rel" && addNoFollow {
+						if htmlAttr.Key == "rel" && (addNoFollow || addNoReferrer) {
 
-							if strings.Contains(htmlAttr.Val, "nofollow") {
-								noFollowFound = true
-								tmpAttrs = append(tmpAttrs, htmlAttr)
-								appended = true
-							} else {
+							if addNoFollow && !strings.Contains(htmlAttr.Val, "nofollow") {
 								htmlAttr.Val += " nofollow"
-								noFollowFound = true
-								tmpAttrs = append(tmpAttrs, htmlAttr)
-								appended = true
 							}
+							if addNoReferrer && !strings.Contains(htmlAttr.Val, "noreferrer") {
+								htmlAttr.Val += " noreferrer"
+							}
+							noFollowFound = addNoFollow
+							noReferrerFound = addNoReferrer
+							tmpAttrs = append(tmpAttrs, htmlAttr)
+							appended = true
 						}
 
 						if elementName == "a" && htmlAttr.Key == "target" {
@@ -448,14 +454,22 @@ func (p *Policy) sanitizeAttrs(
 							tmpAttrs = append(tmpAttrs, htmlAttr)
 						}
 					}
-					if noFollowFound || targetBlankFound {
+					if noFollowFound || noReferrerFound || targetBlankFound {
 						cleanAttrs = tmpAttrs
 					}
 
-					if addNoFollow && !noFollowFound {
+					if (addNoFollow && !noFollowFound) || (addNoReferrer && !noReferrerFound) {
 						rel := html.Attribute{}
 						rel.Key = "rel"
-						rel.Val = "nofollow"
+						if addNoFollow {
+							rel.Val = "nofollow"
+						}
+						if addNoReferrer {
+							if rel.Val != "" {
+								rel.Val += " "
+							}
+							rel.Val += "noreferrer"
+						}
 						cleanAttrs = append(cleanAttrs, rel)
 					}
 
