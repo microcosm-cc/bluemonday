@@ -510,9 +510,11 @@ func TestDefaultHandlers(t *testing.T) {
 		},
 		{
 			in: `<div style="font-family: 'Times New Roman', Times, ` +
-				`serif"></div>`,
+				`serif"></div><span style="font-family: comic sans ms, ` +
+				`cursive, sans-serif;">aaaaaa</span></span>`,
 			expected: `<div style="font-family: &#39;Times New Roman&#39;,` +
-				` Times, serif"></div>`,
+				` Times, serif"></div><span style="font-family: comic sans` +
+				` ms, cursive, sans-serif">aaaaaa</span></span>`,
 		},
 		{
 			in:       `<div style="font-kerning: normal"></div>`,
