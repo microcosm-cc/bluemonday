@@ -1143,7 +1143,7 @@ func FontFamilyHandler(value string) bool {
 	if in(splitVals, values) {
 		return true
 	}
-	reg := regexp.MustCompile(`('[a-z ]+'|[a-z]+)`)
+	reg := regexp.MustCompile(`('[a-z \-]+'|[a-z \-]+)`)
 	reg.Longest()
 	for _, i := range splitVals {
 		i = strings.TrimSpace(i)
