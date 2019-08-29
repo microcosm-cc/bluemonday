@@ -158,7 +158,7 @@ func (p *Policy) writeLinkableBuf(buff *bytes.Buffer, token *html.Token) {
 				tokenBuff.WriteString(html.EscapeString(attr.Val))
 				continue
 			}
-			u, err := sanitizedUrl(attr.Val)
+			u, err := sanitizedUrl(u)
 			if err == nil {
 				tokenBuff.WriteString(u)
 			} else {
