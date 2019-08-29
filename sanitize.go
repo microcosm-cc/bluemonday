@@ -86,17 +86,11 @@ func (p *Policy) SanitizeReader(r io.Reader) *bytes.Buffer {
 	return p.sanitize(r)
 }
 
+const escapedURLChars = "'<>\"\r"
+
 func escapeUrlComponent(val string) string {
-	const escapedChars = "'<>\"\r"
-
-	type linkWriter interface {
-		io.Writer
-		io.ByteWriter
-		WriteString(string) (int, error)
-	}
-
 	w := bytes.NewBufferString("")
-	i := strings.IndexAny(val, escapedChars)
+	i := strings.IndexAny(val, escapedURLChars)
 	for i != -1 {
 		if _, err := w.WriteString(val[:i]); err != nil {
 			return w.String()
@@ -122,7 +116,7 @@ func escapeUrlComponent(val string) string {
 		if _, err := w.WriteString(esc); err != nil {
 			return w.String()
 		}
-		i = strings.IndexAny(val, escapedChars)
+		i = strings.IndexAny(val, escapedURLChars)
 	}
 	w.WriteString(val)
 	return w.String()
