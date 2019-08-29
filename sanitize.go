@@ -86,6 +86,104 @@ func (p *Policy) SanitizeReader(r io.Reader) *bytes.Buffer {
 	return p.sanitize(r)
 }
 
+func escapeUrlComponent(val string) string {
+	const escapedChars = "'<>\"\r"
+
+	type linkWriter interface {
+		io.Writer
+		io.ByteWriter
+		WriteString(string) (int, error)
+	}
+
+	w := bytes.NewBufferString("")
+	i := strings.IndexAny(val, escapedChars)
+	for i != -1 {
+		if _, err := w.WriteString(val[:i]); err != nil {
+			return w.String()
+		}
+		var esc string
+		switch val[i] {
+		case '\'':
+			// "&#39;" is shorter than "&apos;" and apos was not in HTML until HTML5.
+			esc = "&#39;"
+		case '<':
+			esc = "&lt;"
+		case '>':
+			esc = "&gt;"
+		case '"':
+			// "&#34;" is shorter than "&quot;".
+			esc = "&#34;"
+		case '\r':
+			esc = "&#13;"
+		default:
+			panic("unrecognized escape character")
+		}
+		val = val[i+1:]
+		if _, err := w.WriteString(esc); err != nil {
+			return w.String()
+		}
+		i = strings.IndexAny(val, escapedChars)
+	}
+	w.WriteString(val)
+	return w.String()
+}
+
+func sanitizedUrl(val string) (string, error) {
+	u, err := url.Parse(val)
+	if err != nil {
+		return "", err
+	}
+	// sanitize the url query params
+	sanitizedQueryValues := make(url.Values, 0)
+	queryValues := u.Query()
+	for k, vals := range queryValues {
+		sk := html.EscapeString(k)
+		for _, v := range vals {
+			sv := escapeUrlComponent(v)
+			sanitizedQueryValues.Set(sk, sv)
+		}
+	}
+	u.RawQuery = sanitizedQueryValues.Encode()
+	// u.String() will also sanitize host/scheme/user/pass
+	return u.String(), nil
+}
+
+func (p *Policy) writeLinkableBuf(buff *bytes.Buffer, token *html.Token) {
+	// do not escape multiple query parameters
+	tokenBuff := bytes.NewBufferString("")
+	tokenBuff.WriteString("<")
+	tokenBuff.WriteString(token.Data)
+	for _, attr := range token.Attr {
+		tokenBuff.WriteByte(' ')
+		tokenBuff.WriteString(attr.Key)
+		tokenBuff.WriteString(`="`)
+		switch attr.Key {
+		case "href", "src":
+			u, ok := p.validURL(attr.Val)
+			if !ok {
+				tokenBuff.WriteString(html.EscapeString(attr.Val))
+				continue
+			}
+			u, err := sanitizedUrl(attr.Val)
+			if err == nil {
+				tokenBuff.WriteString(u)
+			} else {
+				// fallthrough
+				tokenBuff.WriteString(html.EscapeString(attr.Val))
+			}
+		default:
+			// re-apply
+			tokenBuff.WriteString(html.EscapeString(attr.Val))
+		}
+		tokenBuff.WriteByte('"')
+	}
+	if token.Type == html.SelfClosingTagToken {
+		tokenBuff.WriteString("/")
+	}
+	tokenBuff.WriteString(">")
+	buff.WriteString(tokenBuff.String())
+}
+
 // Performs the actual sanitization process.
 func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
@@ -150,7 +248,6 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 				break
 			}
-
 			if len(token.Attr) != 0 {
 				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
 			}
@@ -167,7 +264,12 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			}
 
 			if !skipElementContent {
-				buff.WriteString(token.String())
+				// do not escape multiple query parameters
+				if linkable(token.Data) {
+					p.writeLinkableBuf(&buff, &token)
+				} else {
+					buff.WriteString(token.String())
+				}
 			}
 
 		case html.EndTagToken:
@@ -226,7 +328,12 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			}
 
 			if !skipElementContent {
-				buff.WriteString(token.String())
+				// do not escape multiple query parameters
+				if linkable(token.Data) {
+					p.writeLinkableBuf(&buff, &token)
+				} else {
+					buff.WriteString(token.String())
+				}
 			}
 
 		case html.TextToken:
