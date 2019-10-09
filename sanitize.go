@@ -31,6 +31,7 @@ package bluemonday
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/url"
 	"regexp"
@@ -233,14 +234,34 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
-					skipElementContent = true
-					skippingElementsCount++
+				fmt.Println("Not OKAY")
+				// check if we have any regex that match the element
+				if aps == nil{
+					aps = make(map[string]attrPolicy,0)
 				}
-				if p.addSpaces {
-					buff.WriteString(" ")
+				matched := false
+				for regex, attrs := range p.elsMatchingAndAttrs{
+					fmt.Println("Start tag Iterating Regexps")
+					if regex.MatchString(token.Data){
+						matched = true
+						fmt.Println("Start tag Matched and appending")
+						// append matching attrs on as could have multiple depending on match
+						for k, v := range attrs{
+							aps[k] = v
+						}
+					}
 				}
-				break
+				if !matched {
+					if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
+						skipElementContent = true
+						skippingElementsCount++
+					}
+					if p.addSpaces {
+						buff.WriteString(" ")
+					}
+					break
+				}
+
 			}
 			if len(token.Attr) != 0 {
 				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
@@ -282,18 +303,28 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 				break
 			}
-
+fmt.Println("End tag")
 			if _, ok := p.elsAndAttrs[token.Data]; !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
+				match := false
+				for regex, _ := range p.elsMatchingAndAttrs{
+					if regex.MatchString(token.Data) {
+						skipElementContent = false
+						match = true
+						break
+						}
+					}
+				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok && !match {
 					skippingElementsCount--
 					if skippingElementsCount == 0 {
 						skipElementContent = false
 					}
 				}
-				if p.addSpaces {
-					buff.WriteString(" ")
+				if !match{
+					if p.addSpaces {
+						buff.WriteString(" ")
+					}
+					break
 				}
-				break
 			}
 
 			if !skipElementContent {
@@ -304,10 +335,27 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if p.addSpaces {
-					buff.WriteString(" ")
+				if aps == nil{
+					aps = make(map[string]attrPolicy,0)
 				}
-				break
+				matched := false
+				for regex, attrs := range p.elsMatchingAndAttrs{
+					fmt.Println("Self Close Iterating Regexps")
+					if regex.MatchString(token.Data){
+						matched = true
+						fmt.Println("Self Close Matched and appending")
+						// append matching attrs on as could have multiple depending on match
+						for k, v := range attrs{
+							aps[k] = v
+						}
+					}
+				}
+				if !matched{
+					if p.addSpaces && !matched {
+						buff.WriteString(" ")
+					}
+					break
+				}
 			}
 
 			if len(token.Attr) != 0 {
@@ -317,10 +365,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
 				if p.addSpaces {
 					buff.WriteString(" ")
+					break
 				}
-				break
 			}
-
 			if !skipElementContent {
 				// do not escape multiple query parameters
 				if linkable(token.Data) {
@@ -710,6 +757,14 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
+	if !ok{
+		for _, r := range p.setOfElementsMatchingAllowedWithoutAttrs{
+			if r.MatchString(elementName){
+				ok = true
+				break
+			}
+		}
+	}
 	return ok
 }
 

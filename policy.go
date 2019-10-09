@@ -86,6 +86,9 @@ type Policy struct {
 	// map[htmlElementName]map[htmlAttributeName]attrPolicy
 	elsAndAttrs map[string]map[string]attrPolicy
 
+	// elsMatchingAndAttrs stores regex based element matches along with attributes
+	elsMatchingAndAttrs map[*regexp.Regexp]map[string]attrPolicy
+
 	// map[htmlAttributeName]attrPolicy
 	globalAttrs map[string]attrPolicy
 
@@ -108,6 +111,16 @@ type Policy struct {
 	// a list of elements that are allowed to have no attributes and that will
 	// be maintained in the output HTML.
 	setOfElementsAllowedWithoutAttrs map[string]struct{}
+
+	// If an element has had all attributes removed as a result of a policy
+	// being applied, then the element would be removed from the output.
+	//
+	// However some elements are valid and have strong layout meaning without
+	// any attributes, i.e. <table>.
+	//
+	// In this case, any element matching a regular expression will be accepted without
+	// attributes added.
+	setOfElementsMatchingAllowedWithoutAttrs []*regexp.Regexp
 
 	setOfElementsToSkipContent map[string]struct{}
 }
@@ -156,6 +169,7 @@ type urlPolicy func(url *url.URL) (allowUrl bool)
 func (p *Policy) init() {
 	if !p.initialized {
 		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
+		p.elsMatchingAndAttrs = make(map[*regexp.Regexp]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
 		p.elsAndStyles = make(map[string]map[string]stylePolicy)
 		p.globalStyles = make(map[string]stylePolicy)
@@ -282,6 +296,30 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 			}
 		}
 	}
+
+	return abp.p
+}
+
+// OnElementsMatching will bind an attribute policy to all elements matching a given regex
+// and return the updated policy
+func (abp *attrPolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy {
+		for _, attr := range abp.attrNames {
+			if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
+				abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+			}
+			ap := attrPolicy{}
+			if abp.regexp != nil {
+				ap.regexp = abp.regexp
+			}
+			abp.p.elsMatchingAndAttrs[regex][attr] = ap
+		}
+
+		if abp.allowEmpty {
+			abp.p.setOfElementsMatchingAllowedWithoutAttrs = append(abp.p.setOfElementsMatchingAllowedWithoutAttrs,regex)
+			if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
+				abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+			}
+		}
 
 	return abp.p
 }
@@ -427,6 +465,14 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 		}
 	}
 
+	return p
+}
+
+func (p *Policy) AllowElementsMatching(regex *regexp.Regexp) *Policy {
+	p.init()
+	if _, ok := p.elsMatchingAndAttrs[regex]; !ok {
+		p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+	}
 	return p
 }
 

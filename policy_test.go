@@ -29,7 +29,10 @@
 
 package bluemonday
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 func TestAllowElementsContent(t *testing.T) {
 	policy := NewPolicy().AllowElementsContent("iframe", "script")
@@ -58,3 +61,45 @@ func TestAllowElementsContent(t *testing.T) {
 		}
 	}
 }
+
+func TestElementsMatching(t *testing.T) {
+	tests := map[string]struct{
+		regexs []*regexp.Regexp
+		in string
+		expected string
+	}{
+		"Self closing tags with regex prefix should strip any that do not match":{
+			regexs: []*regexp.Regexp{
+				regexp.MustCompile(`^my-element-`),
+			},
+			in:`<div><my-element-demo-one /><my-element-demo-two /><not-my-element-demo-one /></div>`,
+			  expected:`<div><my-element-demo-one/><my-element-demo-two/></div>`,
+		},"Standard elements regex prefix should strip any that do not match":{
+			regexs: []*regexp.Regexp{
+				regexp.MustCompile(`^my-element-`),
+			},
+			in:`<div><my-element-demo-one data-test='test'></my-element-demo-one ><my-element-demo-two></my-element-demo-two><not-my-element-demo-one></not-my-element-demo-one></div>`,
+			expected:`<div><my-element-demo-one></my-element-demo-one ><my-element-demo-two></my-element-demo-two></div>`,
+		},
+	}
+
+	for name, test := range tests {
+		policy := NewPolicy().AllowElements("div")
+		policy.AllowNoAttrs().OnElementsMatching(test.regexs[0])
+		policy.AllowDataAttributes()
+		for _, regex := range  test.regexs{
+			policy.AllowElementsMatching(regex)
+		}
+		out := policy.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %s failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				name,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
