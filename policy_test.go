@@ -63,23 +63,23 @@ func TestAllowElementsContent(t *testing.T) {
 }
 
 func TestElementsMatching(t *testing.T) {
-	tests := map[string]struct{
-		regexs []*regexp.Regexp
-		in string
+	tests := map[string]struct {
+		regexs   []*regexp.Regexp
+		in       string
 		expected string
 	}{
-		"Self closing tags with regex prefix should strip any that do not match":{
+		"Self closing tags with regex prefix should strip any that do not match": {
 			regexs: []*regexp.Regexp{
 				regexp.MustCompile(`^my-element-`),
 			},
-			in:`<div><my-element-demo-one /><my-element-demo-two /><not-my-element-demo-one /></div>`,
-			  expected:`<div><my-element-demo-one/><my-element-demo-two/></div>`,
-		},"Standard elements regex prefix should strip any that do not match":{
+			in:       `<div><my-element-demo-one /><my-element-demo-two /><not-my-element-demo-one /></div>`,
+			expected: `<div><my-element-demo-one/><my-element-demo-two/></div>`,
+		}, "Standard elements regex prefix should strip any that do not match": {
 			regexs: []*regexp.Regexp{
 				regexp.MustCompile(`^my-element-`),
 			},
-			in:`<div><my-element-demo-one data-test='test'></my-element-demo-one ><my-element-demo-two></my-element-demo-two><not-my-element-demo-one></not-my-element-demo-one></div>`,
-			expected:`<div><my-element-demo-one></my-element-demo-one ><my-element-demo-two></my-element-demo-two></div>`,
+			in:       `<div><my-element-demo-one data-test='test'></my-element-demo-one ><my-element-demo-two></my-element-demo-two><not-my-element-demo-one></not-my-element-demo-one></div>`,
+			expected: `<div><my-element-demo-one></my-element-demo-one ><my-element-demo-two></my-element-demo-two></div>`,
 		},
 	}
 
@@ -87,7 +87,7 @@ func TestElementsMatching(t *testing.T) {
 		policy := NewPolicy().AllowElements("div")
 		policy.AllowNoAttrs().OnElementsMatching(test.regexs[0])
 		policy.AllowDataAttributes()
-		for _, regex := range  test.regexs{
+		for _, regex := range test.regexs {
 			policy.AllowElementsMatching(regex)
 		}
 		out := policy.Sanitize(test.in)
@@ -102,4 +102,3 @@ func TestElementsMatching(t *testing.T) {
 		}
 	}
 }
-

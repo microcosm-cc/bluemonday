@@ -303,23 +303,23 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 // OnElementsMatching will bind an attribute policy to all elements matching a given regex
 // and return the updated policy
 func (abp *attrPolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy {
-		for _, attr := range abp.attrNames {
-			if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
-				abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
-			}
-			ap := attrPolicy{}
-			if abp.regexp != nil {
-				ap.regexp = abp.regexp
-			}
-			abp.p.elsMatchingAndAttrs[regex][attr] = ap
+	for _, attr := range abp.attrNames {
+		if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
+			abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
 		}
+		ap := attrPolicy{}
+		if abp.regexp != nil {
+			ap.regexp = abp.regexp
+		}
+		abp.p.elsMatchingAndAttrs[regex][attr] = ap
+	}
 
-		if abp.allowEmpty {
-			abp.p.setOfElementsMatchingAllowedWithoutAttrs = append(abp.p.setOfElementsMatchingAllowedWithoutAttrs,regex)
-			if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
-				abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
-			}
+	if abp.allowEmpty {
+		abp.p.setOfElementsMatchingAllowedWithoutAttrs = append(abp.p.setOfElementsMatchingAllowedWithoutAttrs, regex)
+		if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
+			abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
 		}
+	}
 
 	return abp.p
 }

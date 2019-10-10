@@ -236,17 +236,17 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if !ok {
 				fmt.Println("Not OKAY")
 				// check if we have any regex that match the element
-				if aps == nil{
-					aps = make(map[string]attrPolicy,0)
+				if aps == nil {
+					aps = make(map[string]attrPolicy, 0)
 				}
 				matched := false
-				for regex, attrs := range p.elsMatchingAndAttrs{
+				for regex, attrs := range p.elsMatchingAndAttrs {
 					fmt.Println("Start tag Iterating Regexps")
-					if regex.MatchString(token.Data){
+					if regex.MatchString(token.Data) {
 						matched = true
 						fmt.Println("Start tag Matched and appending")
 						// append matching attrs on as could have multiple depending on match
-						for k, v := range attrs{
+						for k, v := range attrs {
 							aps[k] = v
 						}
 					}
@@ -303,23 +303,23 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 				break
 			}
-fmt.Println("End tag")
+			fmt.Println("End tag")
 			if _, ok := p.elsAndAttrs[token.Data]; !ok {
 				match := false
-				for regex, _ := range p.elsMatchingAndAttrs{
+				for regex := range p.elsMatchingAndAttrs {
 					if regex.MatchString(token.Data) {
 						skipElementContent = false
 						match = true
 						break
-						}
 					}
+				}
 				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok && !match {
 					skippingElementsCount--
 					if skippingElementsCount == 0 {
 						skipElementContent = false
 					}
 				}
-				if !match{
+				if !match {
 					if p.addSpaces {
 						buff.WriteString(" ")
 					}
@@ -335,22 +335,22 @@ fmt.Println("End tag")
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if aps == nil{
-					aps = make(map[string]attrPolicy,0)
+				if aps == nil {
+					aps = make(map[string]attrPolicy, 0)
 				}
 				matched := false
-				for regex, attrs := range p.elsMatchingAndAttrs{
+				for regex, attrs := range p.elsMatchingAndAttrs {
 					fmt.Println("Self Close Iterating Regexps")
-					if regex.MatchString(token.Data){
+					if regex.MatchString(token.Data) {
 						matched = true
 						fmt.Println("Self Close Matched and appending")
 						// append matching attrs on as could have multiple depending on match
-						for k, v := range attrs{
+						for k, v := range attrs {
 							aps[k] = v
 						}
 					}
 				}
-				if !matched{
+				if !matched {
 					if p.addSpaces && !matched {
 						buff.WriteString(" ")
 					}
@@ -757,9 +757,9 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
-	if !ok{
-		for _, r := range p.setOfElementsMatchingAllowedWithoutAttrs{
-			if r.MatchString(elementName){
+	if !ok {
+		for _, r := range p.setOfElementsMatchingAllowedWithoutAttrs {
+			if r.MatchString(elementName) {
 				ok = true
 				break
 			}
