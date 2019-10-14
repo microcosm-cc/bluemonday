@@ -62,33 +62,134 @@ func TestAllowElementsContent(t *testing.T) {
 	}
 }
 
-func TestElementsMatching(t *testing.T) {
+func TestAllowElementsMatching(t *testing.T) {
 	tests := map[string]struct {
-		regexs   []*regexp.Regexp
+		policyFn func(policy *Policy)
 		in       string
 		expected string
 	}{
 		"Self closing tags with regex prefix should strip any that do not match": {
-			regexs: []*regexp.Regexp{
-				regexp.MustCompile(`^my-element-`),
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div><my-element-demo-one /><my-element-demo-two /><not-my-element-demo-one /></div>`,
-			expected: `<div><my-element-demo-one/><my-element-demo-two/></div>`,
+			in:       `<div>
+							<my-element-demo-one data-test="test" my-attr="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"/>
+							<my-element-demo-two data-test="test"/>
+							
+						</div>`,
 		}, "Standard elements regex prefix should strip any that do not match": {
-			regexs: []*regexp.Regexp{
-				regexp.MustCompile(`^my-element-`),
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div><my-element-demo-one data-test='test'></my-element-demo-one ><my-element-demo-two></my-element-demo-two><not-my-element-demo-one></not-my-element-demo-one></div>`,
-			expected: `<div><my-element-demo-one></my-element-demo-one ><my-element-demo-two></my-element-demo-two></div>`,
+			in:       `<div>
+							<my-element-demo-one data-test="test"></my-element-demo-one>
+							<my-element-demo-two data-test="test"></my-element-demo-two>
+							<not-my-element-demo-one data-test="test"></not-my-element-demo-one>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"></my-element-demo-one>
+							<my-element-demo-two data-test="test"></my-element-demo-two>
+							
+						</div>`,
+		},"Self closing tags with regex prefix and custom attr should strip any that do not match": {
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
+				policy.AllowElements("not-my-element-demo-one")
+			},
+			in:       `<div>
+							<my-element-demo-one data-test="test" my-attr="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
 		},
 	}
 
 	for name, test := range tests {
 		policy := NewPolicy().AllowElements("div")
-		policy.AllowNoAttrs().OnElementsMatching(test.regexs[0])
 		policy.AllowDataAttributes()
-		for _, regex := range test.regexs {
-			policy.AllowElementsMatching(regex)
+		if test.policyFn != nil{
+			test.policyFn(policy)
+		}
+		out := policy.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %s failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				name,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
+func TestAttrToElementMatching(t *testing.T){
+	tests := map[string]struct {
+		policyFn func(policy *Policy)
+		in       string
+		expected string
+	}{
+		"Self closing tags with regex prefix should strip any that do not match": {
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
+			},
+			in:       `<div>
+							<my-element-demo-one data-test="test" my-attr="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"/>
+							<my-element-demo-two data-test="test"/>
+							
+						</div>`,
+		}, "Standard elements regex prefix should strip any that do not match": {
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
+			},
+			in:       `<div>
+							<my-element-demo-one data-test="test"></my-element-demo-one>
+							<my-element-demo-two data-test="test"></my-element-demo-two>
+							<not-my-element-demo-one data-test="test"></not-my-element-demo-one>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"></my-element-demo-one>
+							<my-element-demo-two data-test="test"></my-element-demo-two>
+							
+						</div>`,
+		},"Self closing tags with regex prefix and custom attr should strip any that do not match": {
+			policyFn: func(policy *Policy) {
+				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
+				policy.AllowElements("not-my-element-demo-one")
+			},
+			in:       `<div>
+							<my-element-demo-one data-test="test" my-attr="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
+			expected: `<div>
+							<my-element-demo-one data-test="test"/>
+							<my-element-demo-two data-test="test"/>
+							<not-my-element-demo-one data-test="test"/>
+						</div>`,
+		},
+	}
+
+	for name, test := range tests {
+		policy := NewPolicy().AllowElements("div")
+		policy.AllowDataAttributes()
+		if test.policyFn != nil{
+			test.policyFn(policy)
 		}
 		out := policy.Sanitize(test.in)
 		if out != test.expected {
