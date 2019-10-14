@@ -95,6 +95,9 @@ type Policy struct {
 	// map[htmlElementName]map[cssPropertyName]stylePolicy
 	elsAndStyles map[string]map[string]stylePolicy
 
+	// map[regex]map[cssPropertyName]stylePolicy
+	elsMatchingAndStyles map[*regexp.Regexp]map[string]stylePolicy
+
 	// map[cssPropertyName]stylePolicy
 	globalStyles map[string]stylePolicy
 
@@ -172,6 +175,7 @@ func (p *Policy) init() {
 		p.elsMatchingAndAttrs = make(map[*regexp.Regexp]map[string]attrPolicy)
 		p.globalAttrs = make(map[string]attrPolicy)
 		p.elsAndStyles = make(map[string]map[string]stylePolicy)
+		p.elsMatchingAndStyles = make(map[*regexp.Regexp]map[string]stylePolicy)
 		p.globalStyles = make(map[string]stylePolicy)
 		p.allowURLSchemes = make(map[string]urlPolicy)
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
@@ -421,6 +425,32 @@ func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
 			spb.p.elsAndStyles[element][attr] = sp
 		}
 	}
+
+	return spb.p
+}
+
+// OnElementsMatching will bind a style policy to any HTML elements matching the pattern
+// and return the updated policy
+func (spb *stylePolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy {
+
+		for _, attr := range spb.propertyNames {
+
+			if _, ok := spb.p.elsMatchingAndStyles[regex]; !ok {
+				spb.p.elsMatchingAndStyles[regex] = make(map[string]stylePolicy)
+			}
+
+			sp := stylePolicy{}
+			if spb.handler != nil {
+				sp.handler = spb.handler
+			} else if len(spb.enum) > 0 {
+				sp.enum = spb.enum
+			} else if spb.regexp != nil {
+				sp.regexp = spb.regexp
+			} else {
+				sp.handler = getDefaultHandler(attr)
+			}
+			spb.p.elsMatchingAndStyles[regex][attr] = sp
+		}
 
 	return spb.p
 }
