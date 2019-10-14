@@ -233,20 +233,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				// check if we have any regex that match the element
-				if aps == nil {
-					aps = make(map[string]attrPolicy, 0)
-				}
-				matched := false
-				for regex, attrs := range p.elsMatchingAndAttrs {
-					if regex.MatchString(token.Data) {
-						matched = true
-						// append matching attrs on as could have multiple depending on match
-						for k, v := range attrs {
-							aps[k] = v
-						}
-					}
-				}
+				aa, matched := p.matchRegex(token.Data)
 				if !matched {
 					if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
 						skipElementContent = true
@@ -257,7 +244,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 					}
 					break
 				}
-
+				aps = aa
 			}
 			if len(token.Attr) != 0 {
 				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
@@ -330,25 +317,14 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if aps == nil {
-					aps = make(map[string]attrPolicy, 0)
-				}
-				matched := false
-				for regex, attrs := range p.elsMatchingAndAttrs {
-					if regex.MatchString(token.Data) {
-						matched = true
-						// append matching attrs on as could have multiple depending on match
-						for k, v := range attrs {
-							aps[k] = v
-						}
-					}
-				}
+				aa, matched := p.matchRegex(token.Data)
 				if !matched {
 					if p.addSpaces && !matched {
 						buff.WriteString(" ")
 					}
 					break
 				}
+				aps = aa
 			}
 
 			if len(token.Attr) != 0 {
@@ -896,4 +872,18 @@ func removeUnicode(value string) string {
 		currentLoc = cssUnicodeChar.FindStringIndex(substitutedValue)
 	}
 	return substitutedValue
+}
+
+func (p *Policy) matchRegex(elementName string ) (map[string]attrPolicy, bool) {
+	aps := make(map[string]attrPolicy, 0)
+	matched := false
+	for regex, attrs := range p.elsMatchingAndAttrs {
+		if regex.MatchString(elementName) {
+			matched = true
+			for k, v := range attrs {
+				aps[k] = v
+			}
+		}
+	}
+	return aps, matched
 }
