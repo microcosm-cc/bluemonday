@@ -233,14 +233,18 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
-					skipElementContent = true
-					skippingElementsCount++
+				aa, matched := p.matchRegex(token.Data)
+				if !matched {
+					if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
+						skipElementContent = true
+						skippingElementsCount++
+					}
+					if p.addSpaces {
+						buff.WriteString(" ")
+					}
+					break
 				}
-				if p.addSpaces {
-					buff.WriteString(" ")
-				}
-				break
+				aps = aa
 			}
 			if len(token.Attr) != 0 {
 				token.Attr = p.sanitizeAttrs(token.Data, token.Attr, aps)
@@ -282,18 +286,27 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 				}
 				break
 			}
-
 			if _, ok := p.elsAndAttrs[token.Data]; !ok {
-				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok {
+				match := false
+				for regex := range p.elsMatchingAndAttrs {
+					if regex.MatchString(token.Data) {
+						skipElementContent = false
+						match = true
+						break
+					}
+				}
+				if _, ok := p.setOfElementsToSkipContent[token.Data]; ok && !match {
 					skippingElementsCount--
 					if skippingElementsCount == 0 {
 						skipElementContent = false
 					}
 				}
-				if p.addSpaces {
-					buff.WriteString(" ")
+				if !match {
+					if p.addSpaces {
+						buff.WriteString(" ")
+					}
+					break
 				}
-				break
 			}
 
 			if !skipElementContent {
@@ -304,10 +317,14 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
-				if p.addSpaces {
-					buff.WriteString(" ")
+				aa, matched := p.matchRegex(token.Data)
+				if !matched {
+					if p.addSpaces && !matched {
+						buff.WriteString(" ")
+					}
+					break
 				}
-				break
+				aps = aa
 			}
 
 			if len(token.Attr) != 0 {
@@ -317,10 +334,9 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
 				if p.addSpaces {
 					buff.WriteString(" ")
+					break
 				}
-				break
 			}
-
 			if !skipElementContent {
 				// do not escape multiple query parameters
 				if linkable(token.Data) {
@@ -372,6 +388,17 @@ func (p *Policy) sanitizeAttrs(
 	sps, elementHasStylePolicies := p.elsAndStyles[elementName]
 	if len(p.globalStyles) > 0 || (elementHasStylePolicies && len(sps) > 0) {
 		hasStylePolicies = true
+	}
+	// no specific element policy found, look for a pattern match
+	if !hasStylePolicies{
+		for k, v := range p.elsMatchingAndStyles{
+			if k.MatchString(elementName) {
+				if len(v) > 0{
+					hasStylePolicies = true
+					break
+				}
+			}
+		}
 	}
 
 	// Builds a new attribute slice based on the whether the attribute has been
@@ -642,6 +669,19 @@ func (p *Policy) sanitizeAttrs(
 
 func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.Attribute {
 	sps := p.elsAndStyles[elementName]
+	if len(sps) == 0{
+		sps = map[string]stylePolicy{}
+		// check for any matching elements, if we don't already have a policy found
+		// if multiple matches are found they will be overwritten, it's best
+		// to not have overlapping matchers
+		for regex, policies :=range p.elsMatchingAndStyles{
+			if regex.MatchString(elementName){
+				for k, v := range policies{
+					sps[k] = v
+				}
+			}
+		}
+	}
 
 	//Add semi-colon to end to fix parsing issue
 	if len(attr.Val) > 0 && attr.Val[len(attr.Val)-1] != ';' {
@@ -652,7 +692,6 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 		attr.Val = ""
 		return attr
 	}
-
 	clean := []string{}
 	prefixes := []string{"-webkit-", "-moz-", "-ms-", "-o-", "mso-", "-xv-", "-atsc-", "-wap-", "-khtml-", "prince-", "-ah-", "-hp-", "-ro-", "-rim-", "-tc-"}
 
@@ -682,7 +721,6 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 				continue
 			}
 		}
-
 		if sp, ok := p.globalStyles[tempProperty]; ok && !addedProperty {
 			if sp.handler != nil {
 				if sp.handler(tempValue) {
@@ -710,6 +748,14 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 
 func (p *Policy) allowNoAttrs(elementName string) bool {
 	_, ok := p.setOfElementsAllowedWithoutAttrs[elementName]
+	if !ok {
+		for _, r := range p.setOfElementsMatchingAllowedWithoutAttrs {
+			if r.MatchString(elementName) {
+				ok = true
+				break
+			}
+		}
+	}
 	return ok
 }
 
@@ -826,4 +872,18 @@ func removeUnicode(value string) string {
 		currentLoc = cssUnicodeChar.FindStringIndex(substitutedValue)
 	}
 	return substitutedValue
+}
+
+func (p *Policy) matchRegex(elementName string ) (map[string]attrPolicy, bool) {
+	aps := make(map[string]attrPolicy, 0)
+	matched := false
+	for regex, attrs := range p.elsMatchingAndAttrs {
+		if regex.MatchString(elementName) {
+			matched = true
+			for k, v := range attrs {
+				aps[k] = v
+			}
+		}
+	}
+	return aps, matched
 }

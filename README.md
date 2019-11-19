@@ -169,10 +169,24 @@ To add elements to a policy either add just the elements:
 p.AllowElements("b", "strong")
 ```
 
+Or using a regex:
+
+_Note: if an element is added by name as shown above, any matching regex will be ignored_
+
+It is also recommended to ensure multiple patterns don't overlap as order of execution is not guaranteed and can result in some rules being missed.
+```go
+p.AllowElementsMatching(regex.MustCompile(`^my-element-`))
+```
+
 Or add elements as a virtue of adding an attribute:
 ```go
 // Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("nowrap").OnElements("td", "th")
+```
+
+Again, this also supports a regex pattern match alternative:
+```go
+p.AllowAttrs("nowrap").OnElementsMatching(regex.MustCompile(`^my-element-`))
 ```
 
 Attributes can either be added to all elements:
@@ -226,6 +240,15 @@ p.AllowAttrs("style").OnElements("span", "p")
 // on 'span' elements only
 p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElements("span")
 ```
+
+Or you can specify elements based on a regex patterm match:
+```go
+p.AllowAttrs("style").OnElementsMatching(regex.MustCompile(`^my-element-`))
+// Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
+// on 'span' elements only
+p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElementsMatching(regex.MustCompile(`^my-element-`))
+```
+
 If you need more specific checking, you can create a handler that takes in a string and returns a bool to
 validate the values for a given property. The string parameter has been
 converted to lowercase and unicode code points have been converted.
