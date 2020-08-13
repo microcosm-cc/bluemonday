@@ -132,6 +132,14 @@ func TestLinks(t *testing.T) {
 			expected: `<a href="?q=1&r=2" rel="nofollow">`,
 		},
 		{
+			in:       `<a href="?q=1&q=2">`,
+			expected: `<a href="?q=1&q=2" rel="nofollow">`,
+		},
+		{
+			in:       `<a href="?q=%7B%22value%22%3A%22a%22%7D">`,
+			expected: `<a href="?q=%7B%22value%22%3A%22a%22%7D" rel="nofollow">`,
+		},
+		{
 			in:       `<a href="?q=1&r=2&s=:foo@">`,
 			expected: `<a href="?q=1&r=2&s=%3Afoo%40" rel="nofollow">`,
 		},
