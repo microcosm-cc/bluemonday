@@ -185,8 +185,8 @@ func sanitizedURL(val string) (string, error) {
 	}
 	// sanitize the url query params
 	sanitizedQueries := make([]Query, 0)
-	// we use parseQuery but not u.Values to keep the order not change because
-	// u.Values is a map which has a random order.
+	// we use parseQuery but not u.Query to keep the order not change because
+	// url.Values is a map which has a random order.
 	queryValues, err := parseQuery(u.RawQuery)
 	if err != nil {
 		return "", err
