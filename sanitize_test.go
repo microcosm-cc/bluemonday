@@ -1678,3 +1678,26 @@ func TestIssue85NoReferrer(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestSanitizedURL(t *testing.T) {
+	tests := []test{
+		{
+			in:       `http://abc.com?d=1&a=2&a=3`,
+			expected: `http://abc.com?d=1&a=2&a=3`,
+		},
+	}
+
+	for _, theTest := range tests {
+		res, err := sanitizedURL(theTest.in)
+		if err != nil {
+			t.Errorf("sanitizedURL returned error: %v", err)
+		}
+		if theTest.expected != res {
+			t.Errorf(
+				"test failed;\ninput   : %s\nexpected: %s",
+				theTest.in,
+				theTest.expected,
+			)
+		}
+	}
+}
