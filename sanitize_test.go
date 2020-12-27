@@ -1685,6 +1685,18 @@ func TestSanitizedURL(t *testing.T) {
 			in:       `http://abc.com?d=1&a=2&a=3`,
 			expected: `http://abc.com?d=1&a=2&a=3`,
 		},
+		{
+			in:       `http://abc.com?d=1 2&a=2&a=3`,
+			expected: `http://abc.com?d=1+2&a=2&a=3`,
+		},
+		{
+			in:       `http://abc.com?d=1/2&a=2&a=3`,
+			expected: `http://abc.com?d=1%2F2&a=2&a=3`,
+		},
+		{
+			in:       `http://abc.com?<d>=1&a=2&a=3`,
+			expected: `http://abc.com?%26lt%3Bd%26gt%3B=1&a=2&a=3`,
+		},
 	}
 
 	for _, theTest := range tests {
@@ -1694,9 +1706,10 @@ func TestSanitizedURL(t *testing.T) {
 		}
 		if theTest.expected != res {
 			t.Errorf(
-				"test failed;\ninput   : %s\nexpected: %s",
+				"test failed;\ninput   : %s\nexpected: %s, actual: %s",
 				theTest.in,
 				theTest.expected,
+				res,
 			)
 		}
 	}
