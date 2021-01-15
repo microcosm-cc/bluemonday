@@ -1678,3 +1678,44 @@ func TestIssue85NoReferrer(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestIssue107(t *testing.T) {
+	p := UGCPolicy()
+	p.RequireCrossOriginAnonymous(true)
+
+	tests := []test{
+		{
+			in:       `<img src="/path" />`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+		{
+			in:       `<img src="/path" crossorigin="use-credentials"/>`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+		{
+			in:       `<img src="/path" crossorigin=""/>`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
