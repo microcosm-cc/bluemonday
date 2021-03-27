@@ -1678,3 +1678,45 @@ func TestIssue85NoReferrer(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+
+
+func TestIssue111ScriptTags(t *testing.T) {
+	p1 := NewPolicy()
+	p2 := UGCPolicy()
+	p3 := UGCPolicy().AllowElements("script")
+
+	in := `<scr\u0130pt>&lt;script&gt;alert(document.domain)&lt;/script&gt;`
+	expected := `&lt;script&gt;alert(document.domain)&lt;/script&gt;`
+	out := p1.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = `&lt;script&gt;alert(document.domain)&lt;/script&gt;`
+	out = p2.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = `&lt;script&gt;alert(document.domain)&lt;/script&gt;`
+	out = p3.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+}
