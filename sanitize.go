@@ -39,7 +39,7 @@ import (
 
 	"golang.org/x/net/html"
 
-	cssparser "github.com/chris-ramon/douceur/parser"
+	"github.com/aymerick/douceur/parser"
 )
 
 var (
@@ -764,7 +764,7 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 	if len(attr.Val) > 0 && attr.Val[len(attr.Val)-1] != ';' {
 		attr.Val = attr.Val + ";"
 	}
-	decs, err := cssparser.ParseDeclarations(attr.Val)
+	decs, err := parser.ParseDeclarations(attr.Val)
 	if err != nil {
 		attr.Val = ""
 		return attr
