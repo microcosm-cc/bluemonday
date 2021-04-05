@@ -721,6 +721,26 @@ func (p *Policy) sanitizeAttrs(
 		}
 	}
 
+	if p.requireCrossOriginAnonymous && len(cleanAttrs) > 0 {
+		switch elementName {
+		case "audio", "img", "link", "script", "video":
+			var crossOriginFound bool
+			for _, htmlAttr := range cleanAttrs {
+				if htmlAttr.Key == "crossorigin" {
+					crossOriginFound = true
+					htmlAttr.Val = "anonymous"
+				}
+			}
+
+			if !crossOriginFound {
+				crossOrigin := html.Attribute{}
+				crossOrigin.Key = "crossorigin"
+				crossOrigin.Val = "anonymous"
+				cleanAttrs = append(cleanAttrs, crossOrigin)
+			}
+		}
+	}
+
 	return cleanAttrs
 }
 
