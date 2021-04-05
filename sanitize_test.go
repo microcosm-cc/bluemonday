@@ -1679,7 +1679,41 @@ func TestIssue85NoReferrer(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSanitizedURL(t *testing.T) {
+	tests := []test{
+		{
+			in:       `http://abc.com?d=1&a=2&a=3`,
+			expected: `http://abc.com?d=1&a=2&a=3`,
+		},
+		{
+			in:       `http://abc.com?d=1 2&a=2&a=3`,
+			expected: `http://abc.com?d=1+2&a=2&a=3`,
+		},
+		{
+			in:       `http://abc.com?d=1/2&a=2&a=3`,
+			expected: `http://abc.com?d=1%2F2&a=2&a=3`,
+		},
+		{
+			in:       `http://abc.com?<d>=1&a=2&a=3`,
+			expected: `http://abc.com?%26lt%3Bd%26gt%3B=1&a=2&a=3`,
+		},
+	}
 
+	for _, theTest := range tests {
+		res, err := sanitizedURL(theTest.in)
+		if err != nil {
+			t.Errorf("sanitizedURL returned error: %v", err)
+		}
+		if theTest.expected != res {
+			t.Errorf(
+				"test failed;\ninput   : %s\nexpected: %s, actual: %s",
+				theTest.in,
+				theTest.expected,
+				res,
+			)
+		}
+	}
+}
 
 func TestIssue111ScriptTags(t *testing.T) {
 	p1 := NewPolicy()
