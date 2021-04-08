@@ -19,10 +19,7 @@ jobs:
         export GOPATH=$HOME/go
         export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
         go test -v ./...
-
-name: Test Old
-jobs:
-  test:
+  test-old:
     strategy:
       matrix:
         go-version: [1.2.x, 1.3.x, 1.4.x]
