@@ -34,4 +34,5 @@ jobs:
         export GOPATH=$HOME/go
         export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
         go get -u github.com/chris-ramon/douceur
+        go get -u golang.org/x/net
         go test -v ./...
