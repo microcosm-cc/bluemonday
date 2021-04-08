@@ -15,10 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Test
-      run: |
-        export GOPATH=$HOME/go
-        export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
-        go test -v ./...
+      run: go test -v ./...
   test-old:
     strategy:
       matrix:
