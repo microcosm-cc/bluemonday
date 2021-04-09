@@ -72,7 +72,7 @@ func TestAllowElementsMatching(t *testing.T) {
 			policyFn: func(policy *Policy) {
 				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" my-attr="test"/>
 							<my-element-demo-two data-test="test"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -86,7 +86,7 @@ func TestAllowElementsMatching(t *testing.T) {
 			policyFn: func(policy *Policy) {
 				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test"></my-element-demo-one>
 							<my-element-demo-two data-test="test"></my-element-demo-two>
 							<not-my-element-demo-one data-test="test"></not-my-element-demo-one>
@@ -96,12 +96,12 @@ func TestAllowElementsMatching(t *testing.T) {
 							<my-element-demo-two data-test="test"></my-element-demo-two>
 							
 						</div>`,
-		},"Self closing tags with regex prefix and custom attr should strip any that do not match": {
+		}, "Self closing tags with regex prefix and custom attr should strip any that do not match": {
 			policyFn: func(policy *Policy) {
 				policy.AllowElementsMatching(regexp.MustCompile(`^my-element-`))
 				policy.AllowElements("not-my-element-demo-one")
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" my-attr="test"/>
 							<my-element-demo-two data-test="test"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -117,7 +117,7 @@ func TestAllowElementsMatching(t *testing.T) {
 	for name, test := range tests {
 		policy := NewPolicy().AllowElements("div")
 		policy.AllowDataAttributes()
-		if test.policyFn != nil{
+		if test.policyFn != nil {
 			test.policyFn(policy)
 		}
 		out := policy.Sanitize(test.in)
@@ -133,7 +133,7 @@ func TestAllowElementsMatching(t *testing.T) {
 	}
 }
 
-func TestAttrOnElementMatching(t *testing.T){
+func TestAttrOnElementMatching(t *testing.T) {
 	tests := map[string]struct {
 		policyFn func(policy *Policy)
 		in       string
@@ -143,7 +143,7 @@ func TestAttrOnElementMatching(t *testing.T){
 			policyFn: func(policy *Policy) {
 				policy.AllowAttrs("my-attr").OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" my-attr="test"/>
 							<my-element-demo-two data-test="test" other-attr="test"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -157,7 +157,7 @@ func TestAttrOnElementMatching(t *testing.T){
 			policyFn: func(policy *Policy) {
 				policy.AllowAttrs("my-attr").OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" my-attr="test" other-attr="test"></my-element-demo-one>
 							<my-element-demo-two data-test="test" other-attr="test"></my-element-demo-two>
 							<not-my-element-demo-one data-test="test" other-attr="test"></not-my-element-demo-one>
@@ -167,14 +167,14 @@ func TestAttrOnElementMatching(t *testing.T){
 							<my-element-demo-two data-test="test"></my-element-demo-two>
 							
 						</div>`,
-		},"Specific element rule defined should override matching rules": {
+		}, "Specific element rule defined should override matching rules": {
 			policyFn: func(policy *Policy) {
 				// specific element rule
 				policy.AllowAttrs("my-other-attr").OnElements("my-element-demo-one")
 				// matched rule takes lower precedence
 				policy.AllowAttrs("my-attr").OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" my-attr="test" my-other-attr="test"/>
 							<my-element-demo-two data-test="test" my-attr="test" my-other-attr="test"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -190,7 +190,7 @@ func TestAttrOnElementMatching(t *testing.T){
 	for name, test := range tests {
 		policy := NewPolicy().AllowElements("div")
 		policy.AllowDataAttributes()
-		if test.policyFn != nil{
+		if test.policyFn != nil {
 			test.policyFn(policy)
 		}
 		out := policy.Sanitize(test.in)
@@ -206,7 +206,7 @@ func TestAttrOnElementMatching(t *testing.T){
 	}
 }
 
-func TestStyleOnElementMatching(t *testing.T){
+func TestStyleOnElementMatching(t *testing.T) {
 	tests := map[string]struct {
 		policyFn func(policy *Policy)
 		in       string
@@ -216,12 +216,12 @@ func TestStyleOnElementMatching(t *testing.T){
 			policyFn: func(policy *Policy) {
 				policy.AllowAttrs("style").
 					OnElementsMatching(regexp.MustCompile(`^my-element-`))
-				policy.AllowStyles("color","mystyle").
+				policy.AllowStyles("color", "mystyle").
 					MatchingHandler(func(s string) bool {
-					return true
-				}).OnElementsMatching(regexp.MustCompile(`^my-element-`))
+						return true
+					}).OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" style="color:#ffffff;mystyle:test;other:value"/>
 							<my-element-demo-two data-test="test" other-attr="test" style="other:value"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -235,12 +235,12 @@ func TestStyleOnElementMatching(t *testing.T){
 			policyFn: func(policy *Policy) {
 				policy.AllowAttrs("style").
 					OnElementsMatching(regexp.MustCompile(`^my-element-`))
-				policy.AllowStyles("color","mystyle").
+				policy.AllowStyles("color", "mystyle").
 					MatchingHandler(func(s string) bool {
 						return true
 					}).OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" style="color:#ffffff;mystyle:test;other:value"></my-element-demo-one>
 							<my-element-demo-two data-test="test" other-attr="test" style="other:value"></my-element-demo-two>
 							<not-my-element-demo-one data-test="test" other-attr="test"></not-my-element-demo-one>
@@ -250,23 +250,23 @@ func TestStyleOnElementMatching(t *testing.T){
 							<my-element-demo-two data-test="test"></my-element-demo-two>
 							
 						</div>`,
-		},"Specific element rule defined should override matching rules": {
+		}, "Specific element rule defined should override matching rules": {
 			policyFn: func(policy *Policy) {
 				policy.AllowAttrs("style").
 					OnElements("my-element-demo-one")
-				policy.AllowStyles("color","mystyle").
+				policy.AllowStyles("color", "mystyle").
 					MatchingHandler(func(s string) bool {
 						return true
 					}).OnElements("my-element-demo-one")
 
 				policy.AllowAttrs("style").
 					OnElementsMatching(regexp.MustCompile(`^my-element-`))
-				policy.AllowStyles("color","customstyle").
+				policy.AllowStyles("color", "customstyle").
 					MatchingHandler(func(s string) bool {
 						return true
 					}).OnElementsMatching(regexp.MustCompile(`^my-element-`))
 			},
-			in:       `<div>
+			in: `<div>
 							<my-element-demo-one data-test="test" style="color:#ffffff;mystyle:test;other:value"/>
 							<my-element-demo-two data-test="test" style="color:#ffffff;mystyle:test;customstyle:value"/>
 							<not-my-element-demo-one data-test="test"/>
@@ -282,7 +282,7 @@ func TestStyleOnElementMatching(t *testing.T){
 	for name, test := range tests {
 		policy := NewPolicy().AllowElements("div")
 		policy.AllowDataAttributes()
-		if test.policyFn != nil{
+		if test.policyFn != nil {
 			test.policyFn(policy)
 		}
 		out := policy.Sanitize(test.in)
