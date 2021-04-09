@@ -152,8 +152,8 @@ func TestLinks(t *testing.T) {
 			expected: `<img src="giraffe.gif"/>`,
 		},
 		{
-			in:       `<img src="giraffe.gif?height=500&width=500" />`,
-			expected: `<img src="giraffe.gif?height=500&width=500"/>`,
+			in:       `<img src="giraffe.gif?height=500&width=500&flag" />`,
+			expected: `<img src="giraffe.gif?height=500&width=500&flag"/>`,
 		},
 	}
 
