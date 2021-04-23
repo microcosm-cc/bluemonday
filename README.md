@@ -58,7 +58,7 @@ We expect to be supplied with well-formatted HTML (closing elements for every ap
 
 ### Supported Go Versions
 
-bluemonday is tested against Go 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, and tip.
+bluemonday is tested on all versions since Go 1.2 including tip.
 
 We do not support Go 1.0 as we depend on `golang.org/x/net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
 
@@ -241,7 +241,7 @@ p.AllowAttrs("style").OnElements("span", "p")
 p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElements("span")
 ```
 
-Or you can specify elements based on a regex patterm match:
+Or you can specify elements based on a regex pattern match:
 ```go
 p.AllowAttrs("style").OnElementsMatching(regex.MustCompile(`^my-element-`))
 // Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
@@ -254,6 +254,7 @@ validate the values for a given property. The string parameter has been
 converted to lowercase and unicode code points have been converted.
 ```go
 myHandler := func(value string) bool{
+	// Validate your input here
 	return true
 }
 p.AllowAttrs("style").OnElements("span", "p")
