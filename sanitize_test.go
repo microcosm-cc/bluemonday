@@ -1795,3 +1795,43 @@ func TestIssue111ScriptTags(t *testing.T) {
 		)
 	}
 }
+
+func TestQuotes(t *testing.T) {
+	p := UGCPolicy()
+
+	tests := []test{
+		{
+			in:       `noquotes`,
+			expected: `noquotes`,
+		},
+		{
+			in:       `"singlequotes"`,
+			expected: `&#34;singlequotes&#34;`,
+		},
+		{
+			in:       `""doublequotes""`,
+			expected: `&#34;&#34;doublequotes&#34;&#34;`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
