@@ -86,6 +86,9 @@ type Policy struct {
 	// When true, allow data attributes.
 	allowDataAttributes bool
 
+	// When true, allow comments.
+	allowComments bool
+
 	// map[htmlElementName]map[htmlAttributeName]attrPolicy
 	elsAndAttrs map[string]map[string]attrPolicy
 
@@ -223,7 +226,7 @@ func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 	return &abp
 }
 
-// AllowDataAttributes whitelists all data attributes. We can't specify the name
+// AllowDataAttributes permits all data attributes. We can't specify the name
 // of each attribute exactly as they are customized.
 //
 // NOTE: These values are not sanitized and applications that evaluate or process
@@ -236,6 +239,22 @@ func (p *Policy) AllowAttrs(attrNames ...string) *attrPolicyBuilder {
 // Use with care!
 func (p *Policy) AllowDataAttributes() {
 	p.allowDataAttributes = true
+}
+
+// AllowComments allows comments.
+//
+// Please note that only one type of comment will be allowed by this, this is the
+// the standard HTML comment <!-- --> which includes the use of that to permit
+// conditionals as per https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/compatibility/ms537512(v=vs.85)?redirectedfrom=MSDN
+//
+// What is not permitted are CDATA XML comments, as the x/net/html package we depend
+// on does not handle this fully and we are not choosing to take on that work:
+// https://pkg.go.dev/golang.org/x/net/html#Tokenizer.AllowCDATA . If the x/net/html
+// package changes this then these will be considered, otherwise if you AllowComments
+// but provide a CDATA comment, then as per the documentation in x/net/html this will
+// be treated as a plain HTML comment.
+func (p *Policy) AllowComments() {
+	p.allowComments = true
 }
 
 // AllowNoAttrs says that attributes on element are optional.

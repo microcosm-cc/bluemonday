@@ -1835,3 +1835,73 @@ func TestQuotes(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestComments(t *testing.T) {
+	p := UGCPolicy()
+
+	tests := []test{
+		{
+			in:       `1 <!-- 2 --> 3`,
+			expected: `1  3`,
+		},
+		{
+			in:       `<!--[if gte mso 9]>Hello<![endif]-->`,
+			expected: ``,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+
+	p.AllowComments()
+
+	tests = []test{
+		{
+			in:       `1 <!-- 2 --> 3`,
+			expected: `1 <!-- 2 --> 3`,
+		},
+		{
+			in:       `<!--[if gte mso 9]>Hello<![endif]-->`,
+			expected: `<!--[if gte mso 9]>Hello<![endif]-->`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg = sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
