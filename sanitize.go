@@ -289,6 +289,10 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 		case html.CommentToken:
 
 			// Comments are ignored by default
+			if p.allowComments {
+				// But if allowed then write the comment out as-is
+				buff.WriteString(token.String())
+			}
 
 		case html.StartTagToken:
 
