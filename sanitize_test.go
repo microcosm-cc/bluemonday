@@ -431,6 +431,89 @@ func TestDataUri(t *testing.T) {
 	}
 }
 
+func TestGlobalURLPatternsViaCustomPolicy(t *testing.T) {
+
+	p := UGCPolicy()
+	// youtube embeds
+	p.AllowElements("iframe")
+	p.AllowAttrs("width", "height", "frameborder").Matching(Integer).OnElements("iframe")
+	p.AllowAttrs("allow").Matching(regexp.MustCompile(`^(([\p{L}\p{N}_-]+)(; )?)+$`)).OnElements("iframe")
+	p.AllowAttrs("allowfullscreen").OnElements("iframe")
+	p.AllowAttrs("src").OnElements("iframe")
+	// These clobber... so you only get one and it applies to URLs everywhere
+	p.AllowURLSchemeWithCustomPolicy("mailto", func(url *url.URL) (allowUrl bool) { return false })
+	p.AllowURLSchemeWithCustomPolicy("http", func(url *url.URL) (allowUrl bool) { return false })
+	p.AllowURLSchemeWithCustomPolicy(
+		"https",
+		func(url *url.URL) bool {
+			// Allow YouTube
+			if url.Host == `www.youtube.com` {
+				return true
+			}
+			return false
+		},
+	)
+
+	tests := []test{
+		{
+			in:       `<iframe width="560" height="315" src="https://www.youtube.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
+			expected: `<iframe width="560" height="315" src="https://www.youtube.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>`,
+		},
+		{
+			in:       `<iframe width="560" height="315" src="htt://www.vimeo.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
+			expected: `<iframe width="560" height="315" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>`,
+		},
+	}
+
+	for ii, test := range tests {
+		out := p.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				ii,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
+func TestELementURLPatternsMatching(t *testing.T) {
+
+	p := UGCPolicy()
+	// youtube embeds
+	p.AllowElements("iframe")
+	p.AllowAttrs("width", "height", "frameborder").Matching(Integer).OnElements("iframe")
+	p.AllowAttrs("allow").Matching(regexp.MustCompile(`^(([\p{L}\p{N}_-]+)(; )?)+$`)).OnElements("iframe")
+	p.AllowAttrs("allowfullscreen").OnElements("iframe")
+	p.AllowAttrs("src").Matching(regexp.MustCompile(`^https://www.youtube.com/.*$`)).OnElements("iframe")
+
+	tests := []test{
+		{
+			in:       `<iframe width="560" height="315" src="https://www.youtube.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
+			expected: `<iframe width="560" height="315" src="https://www.youtube.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>`,
+		},
+		{
+			in:       `<iframe width="560" height="315" src="htt://www.vimeo.com/embed/lJIrF4YjHfQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`,
+			expected: `<iframe width="560" height="315" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>`,
+		},
+	}
+
+	for ii, test := range tests {
+		out := p.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf(
+				"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+				ii,
+				test.in,
+				out,
+				test.expected,
+			)
+		}
+	}
+}
+
 func TestAntiSamy(t *testing.T) {
 
 	standardUrls := regexp.MustCompile(`(?i)^https?|mailto`)
