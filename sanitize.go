@@ -863,14 +863,16 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 			// Remove \r and \n from base64 encoded data to pass url.Parse.
 			matched := dataURIbase64Prefix.FindString(rawurl)
 			if matched != "" {
-				rawurl = matched + strings.ReplaceAll(
-					strings.ReplaceAll(
+				rawurl = matched + strings.Replace(
+					strings.Replace(
 						rawurl[len(matched):],
 						"\r",
 						"",
+						-1,
 					),
 					"\n",
 					"",
+					-1,
 				)
 			}
 		}
