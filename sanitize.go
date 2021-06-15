@@ -47,6 +47,7 @@ var (
 	dataAttributeXMLPrefix    = regexp.MustCompile("^xml.+")
 	dataAttributeInvalidChars = regexp.MustCompile("[A-Z;]+")
 	cssUnicodeChar            = regexp.MustCompile(`\\[0-9a-f]{1,6} ?`)
+	dataURIbase64Prefix       = regexp.MustCompile(`^data:[^,]*;base64,`)
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
@@ -852,11 +853,28 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 		rawurl = strings.TrimSpace(rawurl)
 
 		// URLs cannot contain whitespace, unless it is a data-uri
-		if (strings.Contains(rawurl, " ") ||
+		if strings.Contains(rawurl, " ") ||
 			strings.Contains(rawurl, "\t") ||
-			strings.Contains(rawurl, "\n")) &&
-			!strings.HasPrefix(rawurl, `data:`) {
-			return "", false
+			strings.Contains(rawurl, "\n") {
+			if !strings.HasPrefix(rawurl, `data:`) {
+				return "", false
+			}
+
+			// Remove \r and \n from base64 encoded data to pass url.Parse.
+			matched := dataURIbase64Prefix.FindString(rawurl)
+			if matched != "" {
+				rawurl = matched + strings.Replace(
+					strings.Replace(
+						rawurl[len(matched):],
+						"\r",
+						"",
+						-1,
+					),
+					"\n",
+					"",
+					-1,
+				)
+			}
 		}
 
 		// URLs are valid if they parse
