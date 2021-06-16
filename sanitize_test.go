@@ -3307,3 +3307,320 @@ func TestStyleBlockHandler(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestAdditivePolicies(t *testing.T) {
+	t.Run("AllowAttrs", func(t *testing.T) {
+		p := NewPolicy()
+		p.AllowAttrs("class").Matching(regexp.MustCompile("red")).OnElements("span")
+
+		t.Run("red", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span class="red">test</span>`,
+					expected: `<span class="red">test</span>`,
+				},
+				{
+					in:       `<span class="green">test</span>`,
+					expected: `<span>test</span>`,
+				},
+				{
+					in:       `<span class="blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowAttrs("class").Matching(regexp.MustCompile("green")).OnElements("span")
+
+		t.Run("green", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span class="red">test</span>`,
+					expected: `<span class="red">test</span>`,
+				},
+				{
+					in:       `<span class="green">test</span>`,
+					expected: `<span class="green">test</span>`,
+				},
+				{
+					in:       `<span class="blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowAttrs("class").Matching(regexp.MustCompile("yellow")).OnElements("span")
+
+		t.Run("yellow", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span class="red">test</span>`,
+					expected: `<span class="red">test</span>`,
+				},
+				{
+					in:       `<span class="green">test</span>`,
+					expected: `<span class="green">test</span>`,
+				},
+				{
+					in:       `<span class="blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+	})
+
+	t.Run("AllowStyles", func(t *testing.T) {
+		p := NewPolicy()
+		p.AllowAttrs("style").OnElements("span")
+		p.AllowStyles("color").Matching(regexp.MustCompile("red")).OnElements("span")
+
+		t.Run("red", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span style="color: red">test</span>`,
+					expected: `<span style="color: red">test</span>`,
+				},
+				{
+					in:       `<span style="color: green">test</span>`,
+					expected: `<span>test</span>`,
+				},
+				{
+					in:       `<span style="color: blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowStyles("color").Matching(regexp.MustCompile("green")).OnElements("span")
+
+		t.Run("green", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span style="color: red">test</span>`,
+					expected: `<span style="color: red">test</span>`,
+				},
+				{
+					in:       `<span style="color: green">test</span>`,
+					expected: `<span style="color: green">test</span>`,
+				},
+				{
+					in:       `<span style="color: blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowStyles("color").Matching(regexp.MustCompile("yellow")).OnElements("span")
+
+		t.Run("yellow", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<span style="color: red">test</span>`,
+					expected: `<span style="color: red">test</span>`,
+				},
+				{
+					in:       `<span style="color: green">test</span>`,
+					expected: `<span style="color: green">test</span>`,
+				},
+				{
+					in:       `<span style="color: blue">test</span>`,
+					expected: `<span>test</span>`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+	})
+
+	t.Run("AllowURLSchemeWithCustomPolicy", func(t *testing.T) {
+		p := NewPolicy()
+		p.AllowAttrs("href").OnElements("a")
+
+		p.AllowURLSchemeWithCustomPolicy(
+			"http",
+			func(url *url.URL) bool {
+				return url.Hostname() == "example.org"
+			},
+		)
+
+		t.Run("example.org", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<a href="http://example.org/">test</a>`,
+					expected: `<a href="http://example.org/">test</a>`,
+				},
+				{
+					in:       `<a href="http://example2.org/">test</a>`,
+					expected: `test`,
+				},
+				{
+					in:       `<a href="http://example4.org/">test</a>`,
+					expected: `test`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowURLSchemeWithCustomPolicy(
+			"http",
+			func(url *url.URL) bool {
+				return url.Hostname() == "example2.org"
+			},
+		)
+
+		t.Run("example2.org", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<a href="http://example.org/">test</a>`,
+					expected: `<a href="http://example.org/">test</a>`,
+				},
+				{
+					in:       `<a href="http://example2.org/">test</a>`,
+					expected: `<a href="http://example2.org/">test</a>`,
+				},
+				{
+					in:       `<a href="http://example4.org/">test</a>`,
+					expected: `test`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+
+		p.AllowURLSchemeWithCustomPolicy(
+			"http",
+			func(url *url.URL) bool {
+				return url.Hostname() == "example3.org"
+			},
+		)
+
+		t.Run("example3.org", func(t *testing.T) {
+			tests := []test{
+				{
+					in:       `<a href="http://example.org/">test</a>`,
+					expected: `<a href="http://example.org/">test</a>`,
+				},
+				{
+					in:       `<a href="http://example2.org/">test</a>`,
+					expected: `<a href="http://example2.org/">test</a>`,
+				},
+				{
+					in:       `<a href="http://example4.org/">test</a>`,
+					expected: `test`,
+				},
+			}
+
+			for ii, tt := range tests {
+				out := p.Sanitize(tt.in)
+				if out != tt.expected {
+					t.Errorf(
+						"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+						ii,
+						tt.in,
+						out,
+						tt.expected,
+					)
+				}
+			}
+		})
+	})
+}

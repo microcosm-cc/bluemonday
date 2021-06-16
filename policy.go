@@ -91,28 +91,28 @@ type Policy struct {
 	// When true, allow comments.
 	allowComments bool
 
-	// map[htmlElementName]map[htmlAttributeName]attrPolicy
-	elsAndAttrs map[string]map[string]attrPolicy
+	// map[htmlElementName]map[htmlAttributeName][]attrPolicy
+	elsAndAttrs map[string]map[string][]attrPolicy
 
 	// elsMatchingAndAttrs stores regex based element matches along with attributes
-	elsMatchingAndAttrs map[*regexp.Regexp]map[string]attrPolicy
+	elsMatchingAndAttrs map[*regexp.Regexp]map[string][]attrPolicy
 
-	// map[htmlAttributeName]attrPolicy
-	globalAttrs map[string]attrPolicy
+	// map[htmlAttributeName][]attrPolicy
+	globalAttrs map[string][]attrPolicy
 
-	// map[htmlElementName]map[cssPropertyName]stylePolicy
-	elsAndStyles map[string]map[string]stylePolicy
+	// map[htmlElementName]map[cssPropertyName][]stylePolicy
+	elsAndStyles map[string]map[string][]stylePolicy
 
-	// map[regex]map[cssPropertyName]stylePolicy
-	elsMatchingAndStyles map[*regexp.Regexp]map[string]stylePolicy
+	// map[regex]map[cssPropertyName][]stylePolicy
+	elsMatchingAndStyles map[*regexp.Regexp]map[string][]stylePolicy
 
-	// map[cssPropertyName]stylePolicy
-	globalStyles map[string]stylePolicy
+	// map[cssPropertyName][]stylePolicy
+	globalStyles map[string][]stylePolicy
 
 	// If urlPolicy is nil, all URLs with matching schema are allowed.
 	// Otherwise, only the URLs with matching schema and urlPolicy(url)
 	// returning true are allowed.
-	allowURLSchemes map[string]urlPolicy
+	allowURLSchemes map[string][]urlPolicy
 
 	// If an element has had all attributes removed as a result of a policy
 	// being applied, then the element would be removed from the output.
@@ -179,13 +179,13 @@ type urlPolicy func(url *url.URL) (allowUrl bool)
 // init initializes the maps if this has not been done already
 func (p *Policy) init() {
 	if !p.initialized {
-		p.elsAndAttrs = make(map[string]map[string]attrPolicy)
-		p.elsMatchingAndAttrs = make(map[*regexp.Regexp]map[string]attrPolicy)
-		p.globalAttrs = make(map[string]attrPolicy)
-		p.elsAndStyles = make(map[string]map[string]stylePolicy)
-		p.elsMatchingAndStyles = make(map[*regexp.Regexp]map[string]stylePolicy)
-		p.globalStyles = make(map[string]stylePolicy)
-		p.allowURLSchemes = make(map[string]urlPolicy)
+		p.elsAndAttrs = make(map[string]map[string][]attrPolicy)
+		p.elsMatchingAndAttrs = make(map[*regexp.Regexp]map[string][]attrPolicy)
+		p.globalAttrs = make(map[string][]attrPolicy)
+		p.elsAndStyles = make(map[string]map[string][]stylePolicy)
+		p.elsMatchingAndStyles = make(map[*regexp.Regexp]map[string][]stylePolicy)
+		p.globalStyles = make(map[string][]stylePolicy)
+		p.allowURLSchemes = make(map[string][]urlPolicy)
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
 		p.initialized = true
@@ -286,8 +286,7 @@ func (abp *attrPolicyBuilder) AllowNoAttrs() *attrPolicyBuilder {
 }
 
 // Matching allows a regular expression to be applied to a nascent attribute
-// policy, and returns the attribute policy. Calling this more than once will
-// replace the existing regexp.
+// policy, and returns the attribute policy.
 func (abp *attrPolicyBuilder) Matching(regex *regexp.Regexp) *attrPolicyBuilder {
 
 	abp.regexp = regex
@@ -305,7 +304,7 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 		for _, attr := range abp.attrNames {
 
 			if _, ok := abp.p.elsAndAttrs[element]; !ok {
-				abp.p.elsAndAttrs[element] = make(map[string]attrPolicy)
+				abp.p.elsAndAttrs[element] = make(map[string][]attrPolicy)
 			}
 
 			ap := attrPolicy{}
@@ -313,14 +312,14 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 				ap.regexp = abp.regexp
 			}
 
-			abp.p.elsAndAttrs[element][attr] = ap
+			abp.p.elsAndAttrs[element][attr] = append(abp.p.elsAndAttrs[element][attr], ap)
 		}
 
 		if abp.allowEmpty {
 			abp.p.setOfElementsAllowedWithoutAttrs[element] = struct{}{}
 
 			if _, ok := abp.p.elsAndAttrs[element]; !ok {
-				abp.p.elsAndAttrs[element] = make(map[string]attrPolicy)
+				abp.p.elsAndAttrs[element] = make(map[string][]attrPolicy)
 			}
 		}
 	}
@@ -333,19 +332,19 @@ func (abp *attrPolicyBuilder) OnElements(elements ...string) *Policy {
 func (abp *attrPolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy {
 	for _, attr := range abp.attrNames {
 		if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
-			abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+			abp.p.elsMatchingAndAttrs[regex] = make(map[string][]attrPolicy)
 		}
 		ap := attrPolicy{}
 		if abp.regexp != nil {
 			ap.regexp = abp.regexp
 		}
-		abp.p.elsMatchingAndAttrs[regex][attr] = ap
+		abp.p.elsMatchingAndAttrs[regex][attr] = append(abp.p.elsMatchingAndAttrs[regex][attr], ap)
 	}
 
 	if abp.allowEmpty {
 		abp.p.setOfElementsMatchingAllowedWithoutAttrs = append(abp.p.setOfElementsMatchingAllowedWithoutAttrs, regex)
 		if _, ok := abp.p.elsMatchingAndAttrs[regex]; !ok {
-			abp.p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+			abp.p.elsMatchingAndAttrs[regex] = make(map[string][]attrPolicy)
 		}
 	}
 
@@ -358,7 +357,7 @@ func (abp *attrPolicyBuilder) Globally() *Policy {
 
 	for _, attr := range abp.attrNames {
 		if _, ok := abp.p.globalAttrs[attr]; !ok {
-			abp.p.globalAttrs[attr] = attrPolicy{}
+			abp.p.globalAttrs[attr] = []attrPolicy{}
 		}
 
 		ap := attrPolicy{}
@@ -366,7 +365,7 @@ func (abp *attrPolicyBuilder) Globally() *Policy {
 			ap.regexp = abp.regexp
 		}
 
-		abp.p.globalAttrs[attr] = ap
+		abp.p.globalAttrs[attr] = append(abp.p.globalAttrs[attr], ap)
 	}
 
 	return abp.p
@@ -394,8 +393,7 @@ func (p *Policy) AllowStyles(propertyNames ...string) *stylePolicyBuilder {
 }
 
 // Matching allows a regular expression to be applied to a nascent style
-// policy, and returns the style policy. Calling this more than once will
-// replace the existing regexp.
+// policy, and returns the style policy.
 func (spb *stylePolicyBuilder) Matching(regex *regexp.Regexp) *stylePolicyBuilder {
 
 	spb.regexp = regex
@@ -404,8 +402,7 @@ func (spb *stylePolicyBuilder) Matching(regex *regexp.Regexp) *stylePolicyBuilde
 }
 
 // MatchingEnum allows a list of allowed values to be applied to a nascent style
-// policy, and returns the style policy. Calling this more than once will
-// replace the existing list of allowed values.
+// policy, and returns the style policy.
 func (spb *stylePolicyBuilder) MatchingEnum(enum ...string) *stylePolicyBuilder {
 
 	spb.enum = enum
@@ -414,8 +411,7 @@ func (spb *stylePolicyBuilder) MatchingEnum(enum ...string) *stylePolicyBuilder 
 }
 
 // MatchingHandler allows a handler to be applied to a nascent style
-// policy, and returns the style policy. Calling this more than once will
-// replace the existing handler.
+// policy, and returns the style policy.
 func (spb *stylePolicyBuilder) MatchingHandler(handler func(string) bool) *stylePolicyBuilder {
 
 	spb.handler = handler
@@ -433,7 +429,7 @@ func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
 		for _, attr := range spb.propertyNames {
 
 			if _, ok := spb.p.elsAndStyles[element]; !ok {
-				spb.p.elsAndStyles[element] = make(map[string]stylePolicy)
+				spb.p.elsAndStyles[element] = make(map[string][]stylePolicy)
 			}
 
 			sp := stylePolicy{}
@@ -446,7 +442,7 @@ func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
 			} else {
 				sp.handler = css.GetDefaultHandler(attr)
 			}
-			spb.p.elsAndStyles[element][attr] = sp
+			spb.p.elsAndStyles[element][attr] = append(spb.p.elsAndStyles[element][attr], sp)
 		}
 	}
 
@@ -460,7 +456,7 @@ func (spb *stylePolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy 
 	for _, attr := range spb.propertyNames {
 
 		if _, ok := spb.p.elsMatchingAndStyles[regex]; !ok {
-			spb.p.elsMatchingAndStyles[regex] = make(map[string]stylePolicy)
+			spb.p.elsMatchingAndStyles[regex] = make(map[string][]stylePolicy)
 		}
 
 		sp := stylePolicy{}
@@ -473,7 +469,7 @@ func (spb *stylePolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy 
 		} else {
 			sp.handler = css.GetDefaultHandler(attr)
 		}
-		spb.p.elsMatchingAndStyles[regex][attr] = sp
+		spb.p.elsMatchingAndStyles[regex][attr] = append(spb.p.elsMatchingAndStyles[regex][attr], sp)
 	}
 
 	return spb.p
@@ -485,7 +481,7 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 
 	for _, attr := range spb.propertyNames {
 		if _, ok := spb.p.globalStyles[attr]; !ok {
-			spb.p.globalStyles[attr] = stylePolicy{}
+			spb.p.globalStyles[attr] = []stylePolicy{}
 		}
 
 		// Use only one strategy for validating styles, fallback to default
@@ -499,7 +495,7 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 		} else {
 			sp.handler = css.GetDefaultHandler(attr)
 		}
-		spb.p.globalStyles[attr] = sp
+		spb.p.globalStyles[attr] = append(spb.p.globalStyles[attr], sp)
 	}
 
 	return spb.p
@@ -515,7 +511,7 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 		element = strings.ToLower(element)
 
 		if _, ok := p.elsAndAttrs[element]; !ok {
-			p.elsAndAttrs[element] = make(map[string]attrPolicy)
+			p.elsAndAttrs[element] = make(map[string][]attrPolicy)
 		}
 	}
 
@@ -525,7 +521,7 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 func (p *Policy) AllowElementsMatching(regex *regexp.Regexp) *Policy {
 	p.init()
 	if _, ok := p.elsMatchingAndAttrs[regex]; !ok {
-		p.elsMatchingAndAttrs[regex] = make(map[string]attrPolicy)
+		p.elsMatchingAndAttrs[regex] = make(map[string][]attrPolicy)
 	}
 	return p
 }
@@ -664,7 +660,7 @@ func (p *Policy) AllowURLSchemeWithCustomPolicy(
 
 	scheme = strings.ToLower(scheme)
 
-	p.allowURLSchemes[scheme] = urlPolicy
+	p.allowURLSchemes[scheme] = append(p.allowURLSchemes[scheme], urlPolicy)
 
 	return p
 }
