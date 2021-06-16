@@ -35,6 +35,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/microcosm-cc/bluemonday/css"
 )
 
 // Policy encapsulates the whitelist of HTML elements and attributes that will
@@ -438,7 +440,7 @@ func (spb *stylePolicyBuilder) OnElements(elements ...string) *Policy {
 			} else if spb.regexp != nil {
 				sp.regexp = spb.regexp
 			} else {
-				sp.handler = getDefaultHandler(attr)
+				sp.handler = css.GetDefaultHandler(attr)
 			}
 			spb.p.elsAndStyles[element][attr] = append(spb.p.elsAndStyles[element][attr], sp)
 		}
@@ -465,7 +467,7 @@ func (spb *stylePolicyBuilder) OnElementsMatching(regex *regexp.Regexp) *Policy 
 		} else if spb.regexp != nil {
 			sp.regexp = spb.regexp
 		} else {
-			sp.handler = getDefaultHandler(attr)
+			sp.handler = css.GetDefaultHandler(attr)
 		}
 		spb.p.elsMatchingAndStyles[regex][attr] = append(spb.p.elsMatchingAndStyles[regex][attr], sp)
 	}
@@ -491,7 +493,7 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 		} else if spb.regexp != nil {
 			sp.regexp = spb.regexp
 		} else {
-			sp.handler = getDefaultHandler(attr)
+			sp.handler = css.GetDefaultHandler(attr)
 		}
 		spb.p.globalStyles[attr] = append(spb.p.globalStyles[attr], sp)
 	}
