@@ -445,7 +445,7 @@ func (p *Policy) sanitize(r io.Reader) *bytes.Buffer {
 func (p *Policy) sanitizeAttrs(
 	elementName string,
 	attrs []html.Attribute,
-	aps map[string]attrPolicy,
+	aps map[string][]attrPolicy,
 ) []html.Attribute {
 
 	if len(attrs) == 0 {
@@ -472,6 +472,7 @@ func (p *Policy) sanitizeAttrs(
 	// Builds a new attribute slice based on the whether the attribute has been
 	// whitelisted explicitly or globally.
 	cleanAttrs := []html.Attribute{}
+attrsLoop:
 	for _, htmlAttr := range attrs {
 		if p.allowDataAttributes {
 			// If we see a data attribute, let it through.
@@ -494,27 +495,30 @@ func (p *Policy) sanitizeAttrs(
 		}
 
 		// Is there an element specific attribute policy that applies?
-		if ap, ok := aps[htmlAttr.Key]; ok {
-			if ap.regexp != nil {
-				if ap.regexp.MatchString(htmlAttr.Val) {
+		if apl, ok := aps[htmlAttr.Key]; ok {
+			for _, ap := range apl {
+				if ap.regexp != nil {
+					if ap.regexp.MatchString(htmlAttr.Val) {
+						cleanAttrs = append(cleanAttrs, htmlAttr)
+						continue attrsLoop
+					}
+				} else {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
-					continue
+					continue attrsLoop
 				}
-			} else {
-				cleanAttrs = append(cleanAttrs, htmlAttr)
-				continue
 			}
 		}
 
 		// Is there a global attribute policy that applies?
-		if ap, ok := p.globalAttrs[htmlAttr.Key]; ok {
-
-			if ap.regexp != nil {
-				if ap.regexp.MatchString(htmlAttr.Val) {
+		if apl, ok := p.globalAttrs[htmlAttr.Key]; ok {
+			for _, ap := range apl {
+				if ap.regexp != nil {
+					if ap.regexp.MatchString(htmlAttr.Val) {
+						cleanAttrs = append(cleanAttrs, htmlAttr)
+					}
+				} else {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
 				}
-			} else {
-				cleanAttrs = append(cleanAttrs, htmlAttr)
 			}
 		}
 	}
@@ -758,14 +762,14 @@ func (p *Policy) sanitizeAttrs(
 func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.Attribute {
 	sps := p.elsAndStyles[elementName]
 	if len(sps) == 0 {
-		sps = map[string]stylePolicy{}
+		sps = map[string][]stylePolicy{}
 		// check for any matching elements, if we don't already have a policy found
 		// if multiple matches are found they will be overwritten, it's best
 		// to not have overlapping matchers
 		for regex, policies := range p.elsMatchingAndStyles {
 			if regex.MatchString(elementName) {
 				for k, v := range policies {
-					sps[k] = v
+					sps[k] = append(sps[k], v...)
 				}
 			}
 		}
@@ -783,46 +787,51 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 	clean := []string{}
 	prefixes := []string{"-webkit-", "-moz-", "-ms-", "-o-", "mso-", "-xv-", "-atsc-", "-wap-", "-khtml-", "prince-", "-ah-", "-hp-", "-ro-", "-rim-", "-tc-"}
 
+decLoop:
 	for _, dec := range decs {
-		addedProperty := false
 		tempProperty := strings.ToLower(dec.Property)
 		tempValue := removeUnicode(strings.ToLower(dec.Value))
 		for _, i := range prefixes {
 			tempProperty = strings.TrimPrefix(tempProperty, i)
 		}
-		if sp, ok := sps[tempProperty]; ok {
-			if sp.handler != nil {
-				if sp.handler(tempValue) {
-					clean = append(clean, dec.Property+": "+dec.Value)
-					addedProperty = true
+		if spl, ok := sps[tempProperty]; ok {
+			for _, sp := range spl {
+				if sp.handler != nil {
+					if sp.handler(tempValue) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
+				} else if len(sp.enum) > 0 {
+					if stringInSlice(tempValue, sp.enum) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
+				} else if sp.regexp != nil {
+					if sp.regexp.MatchString(tempValue) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
 				}
-			} else if len(sp.enum) > 0 {
-				if stringInSlice(tempValue, sp.enum) {
-					clean = append(clean, dec.Property+": "+dec.Value)
-					addedProperty = true
-				}
-			} else if sp.regexp != nil {
-				if sp.regexp.MatchString(tempValue) {
-					clean = append(clean, dec.Property+": "+dec.Value)
-					addedProperty = true
-				}
-				continue
 			}
 		}
-		if sp, ok := p.globalStyles[tempProperty]; ok && !addedProperty {
-			if sp.handler != nil {
-				if sp.handler(tempValue) {
-					clean = append(clean, dec.Property+": "+dec.Value)
+		if spl, ok := p.globalStyles[tempProperty]; ok {
+			for _, sp := range spl {
+				if sp.handler != nil {
+					if sp.handler(tempValue) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
+				} else if len(sp.enum) > 0 {
+					if stringInSlice(tempValue, sp.enum) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
+				} else if sp.regexp != nil {
+					if sp.regexp.MatchString(tempValue) {
+						clean = append(clean, dec.Property+": "+dec.Value)
+						continue decLoop
+					}
 				}
-			} else if len(sp.enum) > 0 {
-				if stringInSlice(tempValue, sp.enum) {
-					clean = append(clean, dec.Property+": "+dec.Value)
-				}
-			} else if sp.regexp != nil {
-				if sp.regexp.MatchString(tempValue) {
-					clean = append(clean, dec.Property+": "+dec.Value)
-				}
-				continue
 			}
 		}
 	}
@@ -885,13 +894,19 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 
 		if u.Scheme != "" {
 
-			urlPolicy, ok := p.allowURLSchemes[u.Scheme]
+			urlPolicies, ok := p.allowURLSchemes[u.Scheme]
 			if !ok {
 				return "", false
 			}
 
-			if urlPolicy == nil || urlPolicy(u) == true {
+			if len(urlPolicies) == 0 {
 				return u.String(), true
+			}
+
+			for _, urlPolicy := range urlPolicies {
+				if urlPolicy(u) == true {
+					return u.String(), true
+				}
 			}
 
 			return "", false
@@ -985,14 +1000,14 @@ func removeUnicode(value string) string {
 	return substitutedValue
 }
 
-func (p *Policy) matchRegex(elementName string) (map[string]attrPolicy, bool) {
-	aps := make(map[string]attrPolicy, 0)
+func (p *Policy) matchRegex(elementName string) (map[string][]attrPolicy, bool) {
+	aps := make(map[string][]attrPolicy, 0)
 	matched := false
 	for regex, attrs := range p.elsMatchingAndAttrs {
 		if regex.MatchString(elementName) {
 			matched = true
 			for k, v := range attrs {
-				aps[k] = v
+				aps[k] = append(aps[k], v...)
 			}
 		}
 	}
