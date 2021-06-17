@@ -89,7 +89,7 @@ func Example() {
 	// schema relative URLs (i.e. `href="//www.google.com"` is schema relative).
 	p.AllowRelativeURLs(true)
 
-	// If you have enabled parseable URLs then you can whitelist the schemas
+	// If you have enabled parseable URLs then you can allow the schemas
 	// that are permitted. Bear in mind that allowing relative URLs in the above
 	// option allows for blank schemas.
 	p.AllowURLSchemes("mailto", "http", "https")
@@ -102,7 +102,7 @@ func Example() {
 	p.RequireNoFollowOnLinks(true)
 
 	// We provide a convenience function that applies all of the above, but you
-	// will still need to whitelist the linkable elements:
+	// will still need to allow the linkable elements:
 	p = bluemonday.NewPolicy()
 	p.AllowStandardURLs()
 	p.AllowAttrs("cite").OnElements("blockquote")
@@ -121,7 +121,7 @@ func Example() {
 }
 
 func ExampleNewPolicy() {
-	// NewPolicy is a blank policy and we need to explicitly whitelist anything
+	// NewPolicy is a blank policy and we need to explicitly allow anything
 	// that we wish to allow through
 	p := bluemonday.NewPolicy()
 
@@ -178,7 +178,7 @@ func ExamplePolicy_AllowAttrs() {
 	p := bluemonday.NewPolicy()
 
 	// Allow the 'title' attribute on every HTML element that has been
-	// whitelisted
+	// allowed
 	p.AllowAttrs("title").Matching(bluemonday.Paragraph).Globally()
 
 	// Allow the 'abbr' attribute on only the 'td' and 'th' elements.
@@ -205,7 +205,7 @@ func ExamplePolicy_AllowStyles() {
 	p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none").OnElements("span")
 
 	// Allow the 'color' property with valid RGB(A) hex values only
-	// on every HTML element that has been whitelisted
+	// on every HTML element that has been allowed
 	p.AllowStyles("color").Matching(regexp.MustCompile("(?i)^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$")).Globally()
 
 	// Default handler

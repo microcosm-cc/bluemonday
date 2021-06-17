@@ -39,7 +39,7 @@ import (
 	"github.com/microcosm-cc/bluemonday/css"
 )
 
-// Policy encapsulates the whitelist of HTML elements and attributes that will
+// Policy encapsulates the allowlist of HTML elements and attributes that will
 // be applied to the sanitised HTML.
 //
 // You should use bluemonday.NewPolicy() to create a blank policy as the
@@ -192,9 +192,9 @@ func (p *Policy) init() {
 	}
 }
 
-// NewPolicy returns a blank policy with nothing whitelisted or permitted. This
+// NewPolicy returns a blank policy with nothing allowed or permitted. This
 // is the recommended way to start building a policy and you should now use
-// AllowAttrs() and/or AllowElements() to construct the whitelist of HTML
+// AllowAttrs() and/or AllowElements() to construct the allowlist of HTML
 // elements and attributes.
 func NewPolicy() *Policy {
 
@@ -208,7 +208,7 @@ func NewPolicy() *Policy {
 
 // AllowAttrs takes a range of HTML attribute names and returns an
 // attribute policy builder that allows you to specify the pattern and scope of
-// the whitelisted attribute.
+// the allowed attribute.
 //
 // The attribute policy is only added to the core policy when either Globally()
 // or OnElements(...) are called.
@@ -373,7 +373,7 @@ func (abp *attrPolicyBuilder) Globally() *Policy {
 
 // AllowStyles takes a range of CSS property names and returns a
 // style policy builder that allows you to specify the pattern and scope of
-// the whitelisted property.
+// the allowed property.
 //
 // The style policy is only added to the core policy when either Globally()
 // or OnElements(...) are called.
@@ -501,7 +501,7 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 	return spb.p
 }
 
-// AllowElements will append HTML elements to the whitelist without applying an
+// AllowElements will append HTML elements to the allowlist without applying an
 // attribute policy to those elements (the elements are permitted
 // sans-attributes)
 func (p *Policy) AllowElements(names ...string) *Policy {
@@ -518,6 +518,8 @@ func (p *Policy) AllowElements(names ...string) *Policy {
 	return p
 }
 
+// AllowElementsMatching will append HTML elements to the allowlist if they
+// match a regexp.
 func (p *Policy) AllowElementsMatching(regex *regexp.Regexp) *Policy {
 	p.init()
 	if _, ok := p.elsMatchingAndAttrs[regex]; !ok {
@@ -628,7 +630,7 @@ func (p *Policy) AllowRelativeURLs(require bool) *Policy {
 	return p
 }
 
-// AllowURLSchemes will append URL schemes to the whitelist
+// AllowURLSchemes will append URL schemes to the allowlist
 // Example: p.AllowURLSchemes("mailto", "http", "https")
 func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 	p.init()
@@ -646,7 +648,7 @@ func (p *Policy) AllowURLSchemes(schemes ...string) *Policy {
 }
 
 // AllowURLSchemeWithCustomPolicy will append URL schemes with
-// a custom URL policy to the whitelist.
+// a custom URL policy to the allowlist.
 // Only the URLs with matching schema and urlPolicy(url)
 // returning true will be allowed.
 func (p *Policy) AllowURLSchemeWithCustomPolicy(
@@ -666,7 +668,7 @@ func (p *Policy) AllowURLSchemeWithCustomPolicy(
 }
 
 // AddSpaceWhenStrippingTag states whether to add a single space " " when
-// removing tags that are not whitelisted by the policy.
+// removing tags that are not allowed by the policy.
 //
 // This is useful if you expect to strip tags in dense markup and may lose the
 // value of whitespace.

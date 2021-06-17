@@ -52,7 +52,7 @@ var (
 )
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
-// the given policy whitelist.
+// the given policy allowlist.
 //
 // It returns a HTML string that has been sanitized by the policy or an empty
 // string if an error has occurred (most likely as a consequence of extremely
@@ -66,7 +66,7 @@ func (p *Policy) Sanitize(s string) string {
 }
 
 // SanitizeBytes takes a []byte that contains a HTML fragment or document and applies
-// the given policy whitelist.
+// the given policy allowlist.
 //
 // It returns a []byte containing the HTML that has been sanitized by the policy
 // or an empty []byte if an error has occurred (most likely as a consequence of
@@ -80,7 +80,7 @@ func (p *Policy) SanitizeBytes(b []byte) []byte {
 }
 
 // SanitizeReader takes an io.Reader that contains a HTML fragment or document
-// and applies the given policy whitelist.
+// and applies the given policy allowlist.
 //
 // It returns a bytes.Buffer containing the HTML that has been sanitized by the
 // policy. Errors during sanitization will merely return an empty result.
@@ -88,8 +88,8 @@ func (p *Policy) SanitizeReader(r io.Reader) *bytes.Buffer {
 	return p.sanitizeWithBuff(r)
 }
 
-// SanitizeReaderWriter takes an io.Reader that contains a HTML fragment or document
-// and applies the given policy whitelist and writes to the provided writer returning
+// SanitizeReaderToWriter takes an io.Reader that contains a HTML fragment or document
+// and applies the given policy allowlist and writes to the provided writer returning
 // an error if there is one.
 func (p *Policy) SanitizeReaderToWriter(r io.Reader, w io.Writer) error {
 	return p.sanitize(r, w)
@@ -257,11 +257,6 @@ func (p *Policy) sanitizeWithBuff(r io.Reader) *bytes.Buffer {
 		return &bytes.Buffer{}
 	}
 	return &buff
-}
-
-type stringWriterWriter interface {
-	io.Writer
-	io.StringWriter
 }
 
 type asStringWriter struct {
@@ -530,7 +525,7 @@ func (p *Policy) sanitizeAttrs(
 	}
 
 	// Builds a new attribute slice based on the whether the attribute has been
-	// whitelisted explicitly or globally.
+	// allowed explicitly or globally.
 	cleanAttrs := []html.Attribute{}
 attrsLoop:
 	for _, htmlAttr := range attrs {
