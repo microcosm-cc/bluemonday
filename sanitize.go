@@ -273,7 +273,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 	// rather than:
 	//   p := bluemonday.NewPolicy()
 	// If this is the case, and if they haven't yet triggered an action that
-	// would initiliaze the maps, then we need to do that.
+	// would initialize the maps, then we need to do that.
 	p.init()
 
 	buff, ok := w.(stringWriterWriter)
