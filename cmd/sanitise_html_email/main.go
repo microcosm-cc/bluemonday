@@ -35,13 +35,13 @@ func main() {
 	p.AllowAttrs("type").Matching(StyleType).OnElements("style")
 	p.AllowAttrs("style").Globally()
 
-	// HTML email frequently contains obsolete and basic HTML
+	// HTML email frequently contains obselete and basic HTML
 	p.AllowElements("font", "main", "nav", "header", "footer", "kbd", "legend")
 
 	// Need to permit the style tag, and buttons are often found in emails (why?)
 	p.AllowAttrs("type").Matching(ButtonType).OnElements("button")
 
-	// HTML email tends to see the use of obsolete spacing and styling attributes
+	// HTML email tends to see the use of obselete spacing and styling attributes
 	p.AllowAttrs("bgcolor", "color").Matching(Color).OnElements("basefont", "font", "hr")
 	p.AllowAttrs("border").Matching(bluemonday.Integer).OnElements("img", "table")
 	p.AllowAttrs("cellpadding", "cellspacing").Matching(bluemonday.Integer).OnElements("table")
