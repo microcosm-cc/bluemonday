@@ -129,11 +129,11 @@ func TestLinks(t *testing.T) {
 		},
 		{
 			in:       `<a href="?q=1&r=2">`,
-			expected: `<a href="?q=1&r=2" rel="nofollow">`,
+			expected: `<a href="?q=1&amp;r=2" rel="nofollow">`,
 		},
 		{
 			in:       `<a href="?q=1&q=2">`,
-			expected: `<a href="?q=1&q=2" rel="nofollow">`,
+			expected: `<a href="?q=1&amp;q=2" rel="nofollow">`,
 		},
 		{
 			in:       `<a href="?q=%7B%22value%22%3A%22a%22%7D">`,
@@ -141,7 +141,7 @@ func TestLinks(t *testing.T) {
 		},
 		{
 			in:       `<a href="?q=1&r=2&s=:foo@">`,
-			expected: `<a href="?q=1&r=2&s=%3Afoo%40" rel="nofollow">`,
+			expected: `<a href="?q=1&amp;r=2&amp;s=:foo@" rel="nofollow">`,
 		},
 		{
 			in:       `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==" alt="Red dot" />`,
@@ -152,8 +152,8 @@ func TestLinks(t *testing.T) {
 			expected: `<img src="giraffe.gif"/>`,
 		},
 		{
-			in:       `<img src="giraffe.gif?height=500&width=500&flag" />`,
-			expected: `<img src="giraffe.gif?height=500&width=500&flag"/>`,
+			in:       `<img src="giraffe.gif?height=500&amp;width=500&amp;flag" />`,
+			expected: `<img src="giraffe.gif?height=500&amp;width=500&amp;flag"/>`,
 		},
 	}
 
@@ -3623,4 +3623,40 @@ func TestAdditivePolicies(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestHrefSanitization(t *testing.T) {
+	tests := []test{
+		{
+			in:       `abc<a href="https://abc&quot;&gt;<script&gt;alert(1)<&#x2f;script/">CLICK`,
+			expected: `abc<a href="https://abc&amp;quot;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">CLICK`,
+		},
+		{
+			in:       `<a href="https://abc&quot;&gt;<script&gt;alert(1)<&#x2f;script/">`,
+			expected: `<a href="https://abc&amp;quot;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">`,
+		},
+	}
+
+	p := UGCPolicy()
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
 }
