@@ -130,7 +130,7 @@ func escapeUrlComponent(w stringWriterWriter, val string) error {
 	return err
 }
 
-// Query represents a single part of the query string, a query param 
+// Query represents a single part of the query string, a query param
 type Query struct {
 	Key      string
 	Value    string
@@ -524,11 +524,11 @@ attrsLoop:
 			for _, ap := range apl {
 				if ap.regexp != nil {
 					if ap.regexp.MatchString(htmlAttr.Val) {
-				htmlAttr.Val = escapeAttribute(htmlAttr.Val)
+						htmlAttr.Val = escapeAttribute(htmlAttr.Val)
 						cleanAttrs = append(cleanAttrs, htmlAttr)
 					}
 				} else {
-				htmlAttr.Val = escapeAttribute(htmlAttr.Val)
+					htmlAttr.Val = escapeAttribute(htmlAttr.Val)
 					cleanAttrs = append(cleanAttrs, htmlAttr)
 				}
 			}
