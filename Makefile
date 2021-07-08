@@ -12,7 +12,6 @@
 #
 #   install:      Builds, tests and installs the code locally
 
-GO_PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./.git/*")
 
 .PHONY: all fmt build vet lint test cover install
