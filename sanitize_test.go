@@ -1721,7 +1721,7 @@ AAAASUVORK5CYII=" alt="">`
 func TestIssue55ScriptTags(t *testing.T) {
 	p1 := NewPolicy()
 	p2 := UGCPolicy()
-	p3 := UGCPolicy().AllowElements("script")
+	p3 := UGCPolicy().AllowElements("script").AllowUnsafe(true)
 
 	in := `<SCRIPT>document.write('<h1><header/h1>')</SCRIPT>`
 	expected := ``
@@ -3638,6 +3638,39 @@ func TestHrefSanitization(t *testing.T) {
 	}
 
 	p := UGCPolicy()
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
+func TestInsertionModeSanitization(t *testing.T) {
+	tests := []test{
+		{
+			in:       `<select><option><style><script>alert(1)</script>`,
+			expected: `<select><option>`,
+		},
+	}
+
+	p := UGCPolicy()
+	p.AllowElements("select", "option", "style")
 
 	// These tests are run concurrently to enable the race detector to pick up
 	// potential issues

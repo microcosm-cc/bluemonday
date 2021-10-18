@@ -35,7 +35,7 @@ import (
 )
 
 func TestAllowElementsContent(t *testing.T) {
-	policy := NewPolicy().AllowElementsContent("iframe", "script")
+	policy := NewPolicy().AllowElementsContent("iframe", "script").AllowUnsafe(true)
 
 	tests := []test{
 		{

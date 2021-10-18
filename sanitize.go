@@ -293,6 +293,17 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 
 			mostRecentlyStartedToken = normaliseElementName(token.Data)
 
+			switch normaliseElementName(token.Data) {
+			case `script`:
+				if !p.allowUnsafe {
+					continue
+				}
+			case `style`:
+				if !p.allowUnsafe {
+					continue
+				}
+			}
+
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
 				aa, matched := p.matchRegex(token.Data)
@@ -341,6 +352,17 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				mostRecentlyStartedToken = ""
 			}
 
+			switch normaliseElementName(token.Data) {
+			case `script`:
+				if !p.allowUnsafe {
+					continue
+				}
+			case `style`:
+				if !p.allowUnsafe {
+					continue
+				}
+			}
+
 			if skipClosingTag && closingTagToSkipStack[len(closingTagToSkipStack)-1] == token.Data {
 				closingTagToSkipStack = closingTagToSkipStack[:len(closingTagToSkipStack)-1]
 				if len(closingTagToSkipStack) == 0 {
@@ -386,6 +408,17 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 
 		case html.SelfClosingTagToken:
 
+			switch normaliseElementName(token.Data) {
+			case `script`:
+				if !p.allowUnsafe {
+					continue
+				}
+			case `style`:
+				if !p.allowUnsafe {
+					continue
+				}
+			}
+
 			aps, ok := p.elsAndAttrs[token.Data]
 			if !ok {
 				aa, matched := p.matchRegex(token.Data)
@@ -425,14 +458,22 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				case `script`:
 					// not encouraged, but if a policy allows JavaScript we
 					// should not HTML escape it as that would break the output
-					if _, err := buff.WriteString(token.Data); err != nil {
-						return err
+					//
+					// requires p.AllowUnsafe()
+					if p.allowUnsafe {
+						if _, err := buff.WriteString(token.Data); err != nil {
+							return err
+						}
 					}
 				case "style":
 					// not encouraged, but if a policy allows CSS styles we
 					// should not HTML escape it as that would break the output
-					if _, err := buff.WriteString(token.Data); err != nil {
-						return err
+					//
+					// requires p.AllowUnsafe()
+					if p.allowUnsafe {
+						if _, err := buff.WriteString(token.Data); err != nil {
+							return err
+						}
 					}
 				default:
 					// HTML escape the text
