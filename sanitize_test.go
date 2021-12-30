@@ -1876,7 +1876,7 @@ func TestIFrameSandbox(t *testing.T) {
 	p.AllowAttrs("sandbox").OnElements("iframe")
 	p.RequireSandboxOnIFrame(SandboxAllowDownloads)
 
-	in := `<iframe src="http://example.com" sandbox="allow-forms allow-downloads"></iframe>`
+	in := `<iframe src="http://example.com" sandbox="allow-forms allow-downloads allow-downloads"></iframe>`
 	expected := `<iframe sandbox="allow-downloads"></iframe>`
 	out := p.Sanitize(in)
 	if out != expected {

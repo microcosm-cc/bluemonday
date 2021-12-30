@@ -815,9 +815,13 @@ attrsLoop:
 			if htmlAttr.Key == "sandbox" {
 				sandboxFound = true
 				var cleanVals []string
+				cleanValsSet := make(map[string]bool)
 				for _, val := range strings.Fields(htmlAttr.Val) {
 					if p.requireSandboxOnIFrame[val] {
-						cleanVals = append(cleanVals, val)
+						if !cleanValsSet[val] {
+							cleanVals = append(cleanVals, val)
+							cleanValsSet[val] = true
+						}
 					}
 				}
 				cleanAttrs[i].Val = strings.Join(cleanVals, " ")
