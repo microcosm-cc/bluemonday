@@ -375,6 +375,10 @@ p.AllowAttrs(
 
 Both examples exhibit the same issue, they declare attributes but do not then specify whether they are allowed globally or only on specific elements (and which elements). Attributes belong to one or more elements, and the policy needs to declare this.
 
+## Avoid Escaping Characters
+
+Bluemonday will automatically escape HTML characters, sometimes it is unexpected(e.g. sanitization in Markdown ). You can avoid this feature by using `html.UnescapeString(s)`.
+
 ## Limitations
 
 We are not yet including any tools to help allow and sanitize CSS. Which means that unless you wish to do the heavy lifting in a single regular expression (inadvisable), **you should not allow the "style" attribute anywhere**.
