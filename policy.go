@@ -702,6 +702,8 @@ func (p *Policy) AllowURLSchemeWithCustomPolicy(
 	return p
 }
 
+// RequireSandboxOnIFrame will result in all iframe tags having a sandbox="" tag
+// Any sandbox values not specified here will be filtered from the generated HTML
 func (p *Policy) RequireSandboxOnIFrame(vals ...SandboxValue) {
 	p.requireSandboxOnIFrame = make(map[string]bool)
 
