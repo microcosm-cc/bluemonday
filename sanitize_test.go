@@ -1871,6 +1871,24 @@ func TestIssue107(t *testing.T) {
 	wg.Wait()
 }
 
+func TestIFrameSandbox(t *testing.T) {
+	p := NewPolicy()
+	p.AllowAttrs("sandbox").OnElements("iframe")
+	p.RequireSandboxOnIFrame(SandboxAllowDownloads)
+
+	in := `<iframe src="http://example.com" sandbox="allow-forms allow-downloads allow-downloads"></iframe>`
+	expected := `<iframe sandbox="allow-downloads"></iframe>`
+	out := p.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+}
+
 func TestSanitizedURL(t *testing.T) {
 	tests := []test{
 		{
