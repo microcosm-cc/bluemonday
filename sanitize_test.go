@@ -1874,10 +1874,10 @@ func TestIssue107(t *testing.T) {
 func TestIFrameSandbox(t *testing.T) {
 	p := NewPolicy()
 	p.AllowAttrs("sandbox").OnElements("iframe")
-	p.RequireSandboxOnIFrame(SandboxAllowDownloads)
+	p.RequireSandboxOnIFrame(SandboxAllowForms, SandboxAllowPopups)
 
-	in := `<iframe src="http://example.com" sandbox="allow-forms allow-downloads allow-downloads"></iframe>`
-	expected := `<iframe sandbox="allow-downloads"></iframe>`
+	in := `<iframe src="http://example.com" sandbox="allow-forms allow-downloads allow-downloads allow-popups"></iframe>`
+	expected := `<iframe sandbox="allow-forms allow-popups"></iframe>`
 	out := p.Sanitize(in)
 	if out != expected {
 		t.Errorf(
