@@ -816,7 +816,7 @@ func CaretColorHandler(value string) bool {
 	if in(splitVals, colorValues) {
 		return true
 	}
-	reg := regexp.MustCompile(`#[0-9abcdef]{6}`)
+	reg := regexp.MustCompile(`#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})`)
 	reg.Longest()
 	if reg.FindString(value) == value && value != "" {
 		return true
@@ -865,7 +865,7 @@ func ColorHandler(value string) bool {
 	if in(splitVals, colorValues) {
 		return true
 	}
-	reg := regexp.MustCompile(`#[0-9abcdef]{6}`)
+	reg := regexp.MustCompile(`#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})`)
 	reg.Longest()
 	if reg.FindString(value) == value && value != "" {
 		return true
@@ -1298,7 +1298,7 @@ func GridColumnGapHandler(value string) bool {
 }
 
 func LengthHandler(value string) bool {
-	reg := regexp.MustCompile(`[\-]?[0-9]+[\.]?[0-9]*(%|cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|deg|rad|turn)?`)
+	reg := regexp.MustCompile(`[\-]?([0-9]+|[0-9]*[\.][0-9]+)(%|cm|mm|in|px|pt|pc|em|ex|ch|rem|vw|vh|vmin|vmax|deg|rad|turn)?`)
 	reg.Longest()
 	return reg.FindString(value) == value && value != ""
 }
