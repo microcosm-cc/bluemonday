@@ -3201,11 +3201,11 @@ func TestHrefSanitization(t *testing.T) {
 	tests := []test{
 		{
 			in:       `abc<a href="https://abc&quot;&gt;<script&gt;alert(1)<&#x2f;script/">CLICK`,
-			expected: `abc<a href="https://abc&amp;quot;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">CLICK`,
+			expected: `abc<a href="https://abc&#34;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">CLICK`,
 		},
 		{
 			in:       `<a href="https://abc&quot;&gt;<script&gt;alert(1)<&#x2f;script/">`,
-			expected: `<a href="https://abc&amp;quot;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">`,
+			expected: `<a href="https://abc&#34;&gt;&lt;script&gt;alert(1)&lt;/script/" rel="nofollow">`,
 		},
 	}
 
@@ -3688,6 +3688,48 @@ func TestIssue107(t *testing.T) {
 			expected: `<img src="/path" crossorigin="anonymous"/>`,
 		},
 	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
+func TestIssue143(t *testing.T) {
+	// HTML escaping of attribute values appears to occur twice
+	tests := []test{
+		{
+			in:       `<p title='"'></p>`,
+			expected: `<p title="&#34;"></p>`,
+		},
+		{
+			in:       `<p title="&quot;"></p>`,
+			expected: `<p title="&#34;"></p>`,
+		},
+		{
+			in:       `<p title="&nbsp;"></p>`,
+			expected: `<p title=" "></p>`,
+		},
+	}
+
+	p := UGCPolicy()
+	p.AllowAttrs("title").OnElements("p")
 
 	// These tests are run concurrently to enable the race detector to pick up
 	// potential issues
