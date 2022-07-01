@@ -1243,196 +1243,6 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 	wg.Wait()
 }
 
-func TestIssue3(t *testing.T) {
-	// https://github.com/microcosm-cc/bluemonday/issues/3
-
-	p := UGCPolicy()
-	p.AllowStyling()
-
-	tests := []test{
-		{
-			in:       `Hello <span class="foo bar bash">there</span> world.`,
-			expected: `Hello <span class="foo bar bash">there</span> world.`,
-		},
-		{
-			in:       `Hello <span class="javascript:alert(123)">there</span> world.`,
-			expected: `Hello <span>there</span> world.`,
-		},
-		{
-			in:       `Hello <span class="><script src="http://hackers.org/XSS.js"></script>">there</span> world.`,
-			expected: `Hello <span>&#34;&gt;there</span> world.`,
-		},
-		{
-			in:       `Hello <span class="><script src='http://hackers.org/XSS.js'></script>">there</span> world.`,
-			expected: `Hello <span>there</span> world.`,
-		},
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(tests))
-	for ii, tt := range tests {
-		go func(ii int, tt test) {
-			out := p.Sanitize(tt.in)
-			if out != tt.expected {
-				t.Errorf(
-					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-					ii,
-					tt.in,
-					out,
-					tt.expected,
-				)
-			}
-			wg.Done()
-		}(ii, tt)
-	}
-	wg.Wait()
-}
-
-func TestIssue9(t *testing.T) {
-
-	p := UGCPolicy()
-	p.AllowAttrs("class").Matching(SpaceSeparatedTokens).OnElements("div", "span")
-	p.AllowAttrs("class", "name").Matching(SpaceSeparatedTokens).OnElements("a")
-	p.AllowAttrs("rel").Matching(regexp.MustCompile(`^nofollow$`)).OnElements("a")
-	p.AllowAttrs("aria-hidden").Matching(regexp.MustCompile(`^true$`)).OnElements("a")
-	p.AllowDataURIImages()
-
-	tt := test{
-		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-	}
-	out := p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected,
-		)
-	}
-
-	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-	}
-	out = p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected,
-		)
-	}
-
-	p.AddTargetBlankToFullyQualifiedLinks(true)
-
-	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-	}
-	out = p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected,
-		)
-	}
-
-	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow noopener" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-	}
-	out = p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected,
-		)
-	}
-
-	tt = test{
-		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" target="namedwindow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow noopener" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
-	}
-	out = p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected,
-		)
-	}
-}
-
-func TestIssue18(t *testing.T) {
-	p := UGCPolicy()
-
-	p.AllowAttrs("color").OnElements("font")
-	p.AllowElements("font")
-
-	tt := test{
-		in:       `<font face="Arial">No link here. <a href="http://link.com">link here</a>.</font> Should not be linked here.`,
-		expected: `No link here. <a href="http://link.com" rel="nofollow">link here</a>. Should not be linked here.`,
-	}
-	out := p.Sanitize(tt.in)
-	if out != tt.expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			tt.in,
-			out,
-			tt.expected)
-	}
-}
-
-func TestIssue23(t *testing.T) {
-	p := NewPolicy()
-	p.SkipElementsContent("tag1", "tag2")
-	input := `<tag1>cut<tag2></tag2>harm</tag1><tag1>123</tag1><tag2>234</tag2>`
-	out := p.Sanitize(input)
-	expected := ""
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			out,
-			expected)
-	}
-
-	p = NewPolicy()
-	p.SkipElementsContent("tag")
-	p.AllowElements("p")
-	input = `<tag>234<p>asd</p></tag>`
-	out = p.Sanitize(input)
-	expected = ""
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			out,
-			expected)
-	}
-
-	p = NewPolicy()
-	p.SkipElementsContent("tag")
-	p.AllowElements("p", "br")
-	input = `<tag>234<p>as<br/>d</p></tag>`
-	out = p.Sanitize(input)
-	expected = ""
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			out,
-			expected)
-	}
-}
-
 func TestAllowNoAttrs(t *testing.T) {
 	input := "<tag>test</tag>"
 	outputFail := "test"
@@ -1590,262 +1400,6 @@ func TestTargetBlankNoOpener(t *testing.T) {
 		{
 			in:       `<a href="https://www.google.com/" target="foo" />`,
 			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noopener"/>`,
-		},
-	}
-
-	// These tests are run concurrently to enable the race detector to pick up
-	// potential issues
-	wg := sync.WaitGroup{}
-	wg.Add(len(tests))
-	for ii, tt := range tests {
-		go func(ii int, tt test) {
-			out := p.Sanitize(tt.in)
-			if out != tt.expected {
-				t.Errorf(
-					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-					ii,
-					tt.in,
-					out,
-					tt.expected,
-				)
-			}
-			wg.Done()
-		}(ii, tt)
-	}
-	wg.Wait()
-}
-
-func TestIssue51(t *testing.T) {
-	// Whitespace in URLs is permitted within HTML according to:
-	// https://dev.w3.org/html5/spec-LC/urls.html#parsing-urls
-	//
-	// We were aggressively rejecting URLs that contained line feeds but these
-	// are permitted.
-	//
-	// This test ensures that we do not regress that fix.
-	p := NewPolicy()
-	p.AllowImages()
-	p.AllowDataURIImages()
-
-	input := `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
-	out := p.Sanitize(input)
-	expected := `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			out,
-			expected)
-	}
-
-	input = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0
-eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTD
-pgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfk
-T8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNr
-ZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBt
-ZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1F
-eGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIv
-MjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAg
-ICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5z
-OnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERp
-bWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFn
-ZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRp
-b249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAog
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-IAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8A
-AAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEky
-MyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l6
-8NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBH
-IJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJ
-X/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBd
-HnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6
-m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9
-DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDy
-j7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3
-zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwq
-Vjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45
-TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi
-8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2f
-kGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716
-tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5m
-I3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfk
-whWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcA
-AAAASUVORK5CYII=" alt="">`
-	out = p.Sanitize(input)
-	expected = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			input,
-			out,
-			expected)
-	}
-}
-
-func TestIssue55ScriptTags(t *testing.T) {
-	p1 := NewPolicy()
-	p2 := UGCPolicy()
-	p3 := UGCPolicy().AllowElements("script").AllowUnsafe(true)
-
-	in := `<SCRIPT>document.write('<h1><header/h1>')</SCRIPT>`
-	expected := ``
-	out := p1.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-
-	expected = ``
-	out = p2.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-
-	expected = `<script>document.write('<h1><header/h1>')</script>`
-	out = p3.Sanitize(in)
-	if out != expected {
-		t.Errorf(
-			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-			in,
-			out,
-			expected,
-		)
-	}
-}
-
-func TestIssue85NoReferrer(t *testing.T) {
-	p := UGCPolicy()
-	p.AllowAttrs("rel").OnElements("a")
-	p.RequireNoReferrerOnLinks(true)
-	p.AddTargetBlankToFullyQualifiedLinks(true)
-	p.AllowAttrs("target").Matching(Paragraph).OnElements("a")
-
-	tests := []test{
-		{
-			in:       `<a href="/path" />`,
-			expected: `<a href="/path" rel="nofollow noreferrer"/>`,
-		},
-		{
-			in:       `<a href="/path" target="_blank" />`,
-			expected: `<a href="/path" target="_blank" rel="nofollow noreferrer noopener"/>`,
-		},
-		{
-			in:       `<a href="/path" target="foo" />`,
-			expected: `<a href="/path" target="foo" rel="nofollow noreferrer"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" />`,
-			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" target="_blank"/>`,
-			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" rel="nofollow"/>`,
-			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" rel="noopener"/>`,
-			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" rel="noopener nofollow" />`,
-			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" target="foo" />`,
-			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
-		},
-		{
-			in:       `<a href="https://www.google.com/" rel="external"/>`,
-			expected: `<a href="https://www.google.com/" rel="external nofollow noreferrer noopener" target="_blank"/>`,
-		},
-	}
-
-	// These tests are run concurrently to enable the race detector to pick up
-	// potential issues
-	wg := sync.WaitGroup{}
-	wg.Add(len(tests))
-	for ii, tt := range tests {
-		go func(ii int, tt test) {
-			out := p.Sanitize(tt.in)
-			if out != tt.expected {
-				t.Errorf(
-					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
-					ii,
-					tt.in,
-					out,
-					tt.expected,
-				)
-			}
-			wg.Done()
-		}(ii, tt)
-	}
-	wg.Wait()
-}
-
-func TestIssue107(t *testing.T) {
-	p := UGCPolicy()
-	p.RequireCrossOriginAnonymous(true)
-
-	tests := []test{
-		{
-			in:       `<img src="/path" />`,
-			expected: `<img src="/path" crossorigin="anonymous"/>`,
-		},
-		{
-			in:       `<img src="/path" crossorigin="use-credentials"/>`,
-			expected: `<img src="/path" crossorigin="anonymous"/>`,
-		},
-		{
-			in:       `<img src="/path" crossorigin=""/>`,
-			expected: `<img src="/path" crossorigin="anonymous"/>`,
 		},
 	}
 
@@ -3710,4 +3264,472 @@ func TestInsertionModeSanitization(t *testing.T) {
 		}(ii, tt)
 	}
 	wg.Wait()
+}
+
+func TestIssue3(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/3
+
+	p := UGCPolicy()
+	p.AllowStyling()
+
+	tests := []test{
+		{
+			in:       `Hello <span class="foo bar bash">there</span> world.`,
+			expected: `Hello <span class="foo bar bash">there</span> world.`,
+		},
+		{
+			in:       `Hello <span class="javascript:alert(123)">there</span> world.`,
+			expected: `Hello <span>there</span> world.`,
+		},
+		{
+			in:       `Hello <span class="><script src="http://hackers.org/XSS.js"></script>">there</span> world.`,
+			expected: `Hello <span>&#34;&gt;there</span> world.`,
+		},
+		{
+			in:       `Hello <span class="><script src='http://hackers.org/XSS.js'></script>">there</span> world.`,
+			expected: `Hello <span>there</span> world.`,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+func TestIssue9(t *testing.T) {
+
+	p := UGCPolicy()
+	p.AllowAttrs("class").Matching(SpaceSeparatedTokens).OnElements("div", "span")
+	p.AllowAttrs("class", "name").Matching(SpaceSeparatedTokens).OnElements("a")
+	p.AllowAttrs("rel").Matching(regexp.MustCompile(`^nofollow$`)).OnElements("a")
+	p.AllowAttrs("aria-hidden").Matching(regexp.MustCompile(`^true$`)).OnElements("a")
+	p.AllowDataURIImages()
+
+	tt := test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" rel="nofollow" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out := p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="#git-diff" aria-hidden="true" rel="nofollow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow noopener" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+
+	tt = test{
+		in:       `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" target="namedwindow"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+		expected: `<h2><a name="git-diff" class="anchor" href="https://github.com/shurcooL/github_flavored_markdown/blob/master/sanitize_test.go" aria-hidden="true" rel="nofollow noopener" target="_blank"><span class="octicon octicon-link"></span></a>git diff</h2>`,
+	}
+	out = p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected,
+		)
+	}
+}
+
+func TestIssue18(t *testing.T) {
+	p := UGCPolicy()
+
+	p.AllowAttrs("color").OnElements("font")
+	p.AllowElements("font")
+
+	tt := test{
+		in:       `<font face="Arial">No link here. <a href="http://link.com">link here</a>.</font> Should not be linked here.`,
+		expected: `No link here. <a href="http://link.com" rel="nofollow">link here</a>. Should not be linked here.`,
+	}
+	out := p.Sanitize(tt.in)
+	if out != tt.expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			tt.in,
+			out,
+			tt.expected)
+	}
+}
+
+func TestIssue23(t *testing.T) {
+	p := NewPolicy()
+	p.SkipElementsContent("tag1", "tag2")
+	input := `<tag1>cut<tag2></tag2>harm</tag1><tag1>123</tag1><tag2>234</tag2>`
+	out := p.Sanitize(input)
+	expected := ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+
+	p = NewPolicy()
+	p.SkipElementsContent("tag")
+	p.AllowElements("p")
+	input = `<tag>234<p>asd</p></tag>`
+	out = p.Sanitize(input)
+	expected = ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+
+	p = NewPolicy()
+	p.SkipElementsContent("tag")
+	p.AllowElements("p", "br")
+	input = `<tag>234<p>as<br/>d</p></tag>`
+	out = p.Sanitize(input)
+	expected = ""
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
+
+func TestIssue51(t *testing.T) {
+	// Whitespace in URLs is permitted within HTML according to:
+	// https://dev.w3.org/html5/spec-LC/urls.html#parsing-urls
+	//
+	// We were aggressively rejecting URLs that contained line feeds but these
+	// are permitted.
+	//
+	// This test ensures that we do not regress that fix.
+	p := NewPolicy()
+	p.AllowImages()
+	p.AllowDataURIImages()
+
+	input := `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
+	out := p.Sanitize(input)
+	expected := `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+
+	input = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0
+eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTD
+pgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfk
+T8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNr
+ZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBt
+ZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1F
+eGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIv
+MjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAg
+ICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5z
+OnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERp
+bWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFn
+ZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRp
+b249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAog
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
+IAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8A
+AAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEky
+MyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l6
+8NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBH
+IJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJ
+X/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBd
+HnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6
+m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9
+DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDy
+j7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3
+zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwq
+Vjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45
+TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi
+8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2f
+kGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716
+tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5m
+I3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfk
+whWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcA
+AAAASUVORK5CYII=" alt="">`
+	out = p.Sanitize(input)
+	expected = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAIAAADajyQQAAAAhnpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY5LCsNADEP3c4oewb+R7eOUkEBv0OPXZpKmm76FLIQRGvv7dYxHwyTDpgcSoMLSUp5lghZKxELct3RxXuVycsdDZRlkONn9aGd+MRWBw80dExs2qXbZlTVKu6hbqWfkT8l30Z/8WvEBQsUsKBcOhtYAAAoCaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/Pgo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA0LjQuMC1FeGl2MiI+CiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyIKICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICBleGlmOlBpeGVsWERpbWVuc2lvbj0iNzIiCiAgIGV4aWY6UGl4ZWxZRGltZW5zaW9uPSI3MiIKICAgdGlmZjpJbWFnZVdpZHRoPSI3MiIKICAgdGlmZjpJbWFnZUhlaWdodD0iNzIiCiAgIHRpZmY6T3JpZW50YXRpb249IjEiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/Pq6cYi8AAAADc0JJVAgICNvhT+AAAAN7SURBVGje7dtRSBNhHADwfxJ3L96Le0kf1GD1sBDyO5ALbEkyMyY9bHswg+FDW5B7EKVhJSeElrQUcRIkFFHoi0toPriEVi8KbUQxKSYNk8HpYE5ot4e7e/l68NT08aTp6v9/25+P7+O3/3d3H3ffB7RooSSH7IQQYu0KS4qeeeEWyHbY+qLZvbbZiEcghBBHIJ43NhrQ4oYiRUU7sQ0lFJqPizbBEViUFCWfnOmyCp4ZaV/bfHLKIwiecLYUYJTSbLid2ALJX/E+q7VnUdGz0pSDOKakA39DQrQSd8RI0cqgCLEe8rZ55zb1X5oKwLAMywJoANpOI4ZhAEBdHnA6B5ZVPalqwHCckTGLAqvi69jPwZF36yrIK6GR4NrZjrbTbK2ziVsaeba0CaD+nAtOrtU6m6rY2qbazYWH08syqOtLwUcfoamjzpCsSPNPigy5bYQQIti7xuP6VaOshsV26052Uc/mE1M9DoEQQmxuMbyqGBvwBKUU/sUog380EIYwhCEMYQhD2DGMk4VCASuGMIQhDGEIQ9hxe0Af5eDyj7ejw5PRVAGgwnLNJ/qaK+HTnRZ/bF8rc9/s86umEoKpXyb8E+nWx7NP65nM+9HuB/5T5tc3zouzs/q7Ri0d6vdHLb5GU2lNxa0txuLq6aw3scDVNHZcrsjE0jKwnEmPQnQiVLg26KvnSmwqVjb3DjXvVC8djRVOtVbvGTbmh19utY55z7Cle/NQN94/8IcYl+iq2U19m55Mmb2d51ijnR45TP7yrPvmaME1NnZrrzjy1+mo1tBp6OI6DndF2Ji/f3s03Si+6r34p0FNRb5q50ULd4iuj7Bi8reR7uFUgzjYYYFcLpfL5WT9I0sm9l2rbjQfxnWEFcvFJsIZgEi/O3LgiaVmUluMubr8UN2fkGUZl1QIQxjCEIYwhCEMYYdbUuE+D4QhDGEIQxjC/luYvBK667zE8zx/oc0XXNK3B8vL0716tsX75IOe3fzwxNtyged5vuX6QGhFNThkUfakJ0Sb4H6RyFOqrIZ7rIInmqdUSQbsxDEez+5mI3lKpRm3YOuLSAql2fi4g9gDSUObZ4vy+o2tu/dmATiOBZA1UIEzcQDAMiaO+aPV9nbtKtfkwhWW4wBUWVOh3FTFsce2YnhSAk9K4EmJvxt4UgJPSuCSCmEIQxjCEAYAAL8BrebxGP8KiJcAAAAASUVORK5CYII=" alt="">`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
+
+func TestIssue55(t *testing.T) {
+	p1 := NewPolicy()
+	p2 := UGCPolicy()
+	p3 := UGCPolicy().AllowElements("script").AllowUnsafe(true)
+
+	in := `<SCRIPT>document.write('<h1><header/h1>')</SCRIPT>`
+	expected := ``
+	out := p1.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = ``
+	out = p2.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+
+	expected = `<script>document.write('<h1><header/h1>')</script>`
+	out = p3.Sanitize(in)
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			in,
+			out,
+			expected,
+		)
+	}
+}
+
+func TestIssue85(t *testing.T) {
+	p := UGCPolicy()
+	p.AllowAttrs("rel").OnElements("a")
+	p.RequireNoReferrerOnLinks(true)
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+	p.AllowAttrs("target").Matching(Paragraph).OnElements("a")
+
+	tests := []test{
+		{
+			in:       `<a href="/path" />`,
+			expected: `<a href="/path" rel="nofollow noreferrer"/>`,
+		},
+		{
+			in:       `<a href="/path" target="_blank" />`,
+			expected: `<a href="/path" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="/path" target="foo" />`,
+			expected: `<a href="/path" target="foo" rel="nofollow noreferrer"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" />`,
+			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" target="_blank"/>`,
+			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="nofollow"/>`,
+			expected: `<a href="https://www.google.com/" rel="nofollow noreferrer noopener" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="noopener"/>`,
+			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="noopener nofollow" />`,
+			expected: `<a href="https://www.google.com/" rel="noopener nofollow noreferrer" target="_blank"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" target="foo" />`,
+			expected: `<a href="https://www.google.com/" target="_blank" rel="nofollow noreferrer noopener"/>`,
+		},
+		{
+			in:       `<a href="https://www.google.com/" rel="external"/>`,
+			expected: `<a href="https://www.google.com/" rel="external nofollow noreferrer noopener" target="_blank"/>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
+func TestIssue107(t *testing.T) {
+	p := UGCPolicy()
+	p.RequireCrossOriginAnonymous(true)
+
+	tests := []test{
+		{
+			in:       `<img src="/path" />`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+		{
+			in:       `<img src="/path" crossorigin="use-credentials"/>`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+		{
+			in:       `<img src="/path" crossorigin=""/>`,
+			expected: `<img src="/path" crossorigin="anonymous"/>`,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}
+
+func TestIssue146(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/146
+	//
+	// Ask for image/svg+xml to be accepted.
+	// This blog https://digi.ninja/blog/svg_xss.php shows that inline images
+	// that are SVG are considered safe, so I've added that and this test
+	// verifies that it works.
+	p := NewPolicy()
+	p.AllowImages()
+	p.AllowDataURIImages()
+
+	input := `<img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgCiAgICAgICAgICAgICAgICAgICB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgCiAgICAgICAgICAgICAgICAgICB2aWV3Qm94PSIwIDAgNjk2IDI1OCIgCiAgICAgICAgICAgICAgICAgICBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPGc+Cgk8cGF0aCBmaWxsPSIjQURFMEU0IiBkPSJNMC43ODcsNTMuODI1aDQxLjY2OXYxMTMuODM4aDcyLjgxNHYzNi41MTFIMC43ODdWNTMuODI1eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTEzMy4xMDUsNTMuODI1aDEyMC4yNzV2MzYuNTE0aC03OC42MXYyNS41Nmg3MS4wOTN2MzQuNTgyaC03MS4wOTN2NTMuNjk0aC00MS42NjVWNTMuODI1eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTI2Ny4xMzQsMTI5LjQyOXYtMC40MjdjMC00My44MTYsMzQuMzY0LTc4LjE4Miw4MC45NzQtNzguMTgyYzI2LjQyMSwwLDQ1LjEwNyw4LjE2MSw2MSwyMS45MDgKCQlsLTI0LjQ4NiwyOS40MjNjLTEwLjc0LTkuMDE5LTIxLjQ3OS0xNC4xNzItMzYuMjk0LTE0LjE3MmMtMjEuNjk1LDAtMzguNDUyLDE4LjI1NC0zOC40NTIsNDEuMjM5djAuNDI1CgkJYzAsMjQuMjczLDE2Ljk2Niw0MS42NzIsNDAuODA0LDQxLjY3MmMxMC4xMDMsMCwxNy44MzYtMi4xNDYsMjQuMDYzLTYuMjMxdi0xOC4yNTdoLTI5LjY0M3YtMzAuNWg2OS4xNTl2NjcuNjU5CgkJYy0xNS44OTMsMTMuMTA0LTM4LjAxNiwyMy4xOTctNjUuMjkxLDIzLjE5N0MzMDIuMTQ3LDIwNy4xODIsMjY3LjEzNCwxNzQuOTY0LDI2Ny4xMzQsMTI5LjQyOXoiLz4KCTxwYXRoIGZpbGw9IiNBREUwRTQiIGQ9Ik00MjYuMDg3LDE4MS44MzdsMjMuMTk1LTI3LjcwOWMxNC44MjIsMTEuODE2LDMxLjM2MSwxOC4wNDEsNDguNzU1LDE4LjA0MQoJCWMxMS4xNzEsMCwxNy4xODYtMy44NjYsMTcuMTg2LTEwLjMwNnYtMC40MzdjMC02LjIyNS00Ljk0LTkuNjY1LTI1LjM0Ny0xNC4zODdjLTMyLjAwNi03LjMwMi01Ni43MDItMTYuMzIxLTU2LjcwMi00Ny4yNXYtMC40MwoJCWMwLTI3LjkyMiwyMi4xMjMtNDguMTEzLDU4LjItNDguMTEzYzI1LjU2NCwwLDQ1LjU0Miw2Ljg3NSw2MS44NTgsMTkuOTczbC0yMC44MjksMjkuNDI5CgkJYy0xMy43NDctOS42NjgtMjguNzc4LTE0LjgxOC00Mi4wOTYtMTQuODE4Yy0xMC4wOTcsMC0xNS4wMzcsNC4yOTQtMTUuMDM3LDkuNjYzdjAuNDNjMCw2Ljg2OSw1LjE1NSw5Ljg4MSwyNS45OTIsMTQuNjA2CgkJYzM0LjU3OSw3LjUxNiw1Ni4wNTcsMTguNjg3LDU2LjA1Nyw0Ni44MTl2MC40MjdjMCwzMC43MTUtMjQuMjcxLDQ4Ljk2OS02MC43ODQsNDguOTY5CgkJQzQ2OS45MDEsMjA2Ljc0NCw0NDQuNTU3LDE5OC4zNzIsNDI2LjA4NywxODEuODM3eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTU2My45ODQsMTgxLjgzN2wyMy4xOTEtMjcuNzA5YzE0LjgyNCwxMS44MTYsMzEuMzYyLDE4LjA0MSw0OC43NTUsMTguMDQxCgkJYzExLjE3NCwwLDE3LjE4OC0zLjg2NiwxNy4xODgtMTAuMzA2di0wLjQzN2MwLTYuMjI1LTQuOTQyLTkuNjY1LTI1LjM0NC0xNC4zODdjLTMyLjAwNS03LjMwMi01Ni43MDUtMTYuMzIxLTU2LjcwNS00Ny4yNXYtMC40MwoJCWMwLTI3LjkyMiwyMi4xMjMtNDguMTEzLDU4LjIwNS00OC4xMTNjMjUuNTU5LDAsNDUuNTM1LDYuODc1LDYxLjg1OSwxOS45NzNsLTIwLjgzOSwyOS40MjkKCQljLTEzLjc0LTkuNjY4LTI4Ljc3My0xNC44MTgtNDIuMDk3LTE0LjgxOGMtMTAuMDkxLDAtMTUuMDM1LDQuMjk0LTE1LjAzNSw5LjY2M3YwLjQzYzAsNi44NjksNS4xNTksOS44ODEsMjUuOTk1LDE0LjYwNgoJCWMzNC41NzksNy41MTYsNTYuMDU1LDE4LjY4Nyw1Ni4wNTUsNDYuODE5djAuNDI3YzAsMzAuNzE1LTI0LjI3LDQ4Ljk2OS02MC43ODUsNDguOTY5CgkJQzYwNy43OTgsMjA2Ljc0NCw1ODIuNDUzLDE5OC4zNzIsNTYzLjk4NCwxODEuODM3eiIvPgo8L2c+Cjwvc3ZnPgo=" alt="">`
+	out := p.Sanitize(input)
+	expected := `<img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgCiAgICAgICAgICAgICAgICAgICB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgCiAgICAgICAgICAgICAgICAgICB2aWV3Qm94PSIwIDAgNjk2IDI1OCIgCiAgICAgICAgICAgICAgICAgICBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPGc+Cgk8cGF0aCBmaWxsPSIjQURFMEU0IiBkPSJNMC43ODcsNTMuODI1aDQxLjY2OXYxMTMuODM4aDcyLjgxNHYzNi41MTFIMC43ODdWNTMuODI1eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTEzMy4xMDUsNTMuODI1aDEyMC4yNzV2MzYuNTE0aC03OC42MXYyNS41Nmg3MS4wOTN2MzQuNTgyaC03MS4wOTN2NTMuNjk0aC00MS42NjVWNTMuODI1eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTI2Ny4xMzQsMTI5LjQyOXYtMC40MjdjMC00My44MTYsMzQuMzY0LTc4LjE4Miw4MC45NzQtNzguMTgyYzI2LjQyMSwwLDQ1LjEwNyw4LjE2MSw2MSwyMS45MDgKCQlsLTI0LjQ4NiwyOS40MjNjLTEwLjc0LTkuMDE5LTIxLjQ3OS0xNC4xNzItMzYuMjk0LTE0LjE3MmMtMjEuNjk1LDAtMzguNDUyLDE4LjI1NC0zOC40NTIsNDEuMjM5djAuNDI1CgkJYzAsMjQuMjczLDE2Ljk2Niw0MS42NzIsNDAuODA0LDQxLjY3MmMxMC4xMDMsMCwxNy44MzYtMi4xNDYsMjQuMDYzLTYuMjMxdi0xOC4yNTdoLTI5LjY0M3YtMzAuNWg2OS4xNTl2NjcuNjU5CgkJYy0xNS44OTMsMTMuMTA0LTM4LjAxNiwyMy4xOTctNjUuMjkxLDIzLjE5N0MzMDIuMTQ3LDIwNy4xODIsMjY3LjEzNCwxNzQuOTY0LDI2Ny4xMzQsMTI5LjQyOXoiLz4KCTxwYXRoIGZpbGw9IiNBREUwRTQiIGQ9Ik00MjYuMDg3LDE4MS44MzdsMjMuMTk1LTI3LjcwOWMxNC44MjIsMTEuODE2LDMxLjM2MSwxOC4wNDEsNDguNzU1LDE4LjA0MQoJCWMxMS4xNzEsMCwxNy4xODYtMy44NjYsMTcuMTg2LTEwLjMwNnYtMC40MzdjMC02LjIyNS00Ljk0LTkuNjY1LTI1LjM0Ny0xNC4zODdjLTMyLjAwNi03LjMwMi01Ni43MDItMTYuMzIxLTU2LjcwMi00Ny4yNXYtMC40MwoJCWMwLTI3LjkyMiwyMi4xMjMtNDguMTEzLDU4LjItNDguMTEzYzI1LjU2NCwwLDQ1LjU0Miw2Ljg3NSw2MS44NTgsMTkuOTczbC0yMC44MjksMjkuNDI5CgkJYy0xMy43NDctOS42NjgtMjguNzc4LTE0LjgxOC00Mi4wOTYtMTQuODE4Yy0xMC4wOTcsMC0xNS4wMzcsNC4yOTQtMTUuMDM3LDkuNjYzdjAuNDNjMCw2Ljg2OSw1LjE1NSw5Ljg4MSwyNS45OTIsMTQuNjA2CgkJYzM0LjU3OSw3LjUxNiw1Ni4wNTcsMTguNjg3LDU2LjA1Nyw0Ni44MTl2MC40MjdjMCwzMC43MTUtMjQuMjcxLDQ4Ljk2OS02MC43ODQsNDguOTY5CgkJQzQ2OS45MDEsMjA2Ljc0NCw0NDQuNTU3LDE5OC4zNzIsNDI2LjA4NywxODEuODM3eiIvPgoJPHBhdGggZmlsbD0iI0FERTBFNCIgZD0iTTU2My45ODQsMTgxLjgzN2wyMy4xOTEtMjcuNzA5YzE0LjgyNCwxMS44MTYsMzEuMzYyLDE4LjA0MSw0OC43NTUsMTguMDQxCgkJYzExLjE3NCwwLDE3LjE4OC0zLjg2NiwxNy4xODgtMTAuMzA2di0wLjQzN2MwLTYuMjI1LTQuOTQyLTkuNjY1LTI1LjM0NC0xNC4zODdjLTMyLjAwNS03LjMwMi01Ni43MDUtMTYuMzIxLTU2LjcwNS00Ny4yNXYtMC40MwoJCWMwLTI3LjkyMiwyMi4xMjMtNDguMTEzLDU4LjIwNS00OC4xMTNjMjUuNTU5LDAsNDUuNTM1LDYuODc1LDYxLjg1OSwxOS45NzNsLTIwLjgzOSwyOS40MjkKCQljLTEzLjc0LTkuNjY4LTI4Ljc3My0xNC44MTgtNDIuMDk3LTE0LjgxOGMtMTAuMDkxLDAtMTUuMDM1LDQuMjk0LTE1LjAzNSw5LjY2M3YwLjQzYzAsNi44NjksNS4xNTksOS44ODEsMjUuOTk1LDE0LjYwNgoJCWMzNC41NzksNy41MTYsNTYuMDU1LDE4LjY4Nyw1Ni4wNTUsNDYuODE5djAuNDI3YzAsMzAuNzE1LTI0LjI3LDQ4Ljk2OS02MC43ODUsNDguOTY5CgkJQzYwNy43OTgsMjA2Ljc0NCw1ODIuNDUzLDE5OC4zNzIsNTYzLjk4NCwxODEuODM3eiIvPgo8L2c+Cjwvc3ZnPgo=" alt="">`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
 }
