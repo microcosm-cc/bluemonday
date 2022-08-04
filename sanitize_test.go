@@ -1604,7 +1604,7 @@ func TestComments(t *testing.T) {
 		},
 		{
 			in:       `<!--[if gte mso 9]>Hello<![endif]-->`,
-			expected: `<!--[if gte mso 9]>Hello<![endif]-->`,
+			expected: `<!--[if gte mso 9]&gt;Hello&lt;![endif]-->`,
 		},
 	}
 
