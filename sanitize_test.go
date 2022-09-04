@@ -1602,9 +1602,17 @@ func TestComments(t *testing.T) {
 			in:       `1 <!-- 2 --> 3`,
 			expected: `1 <!-- 2 --> 3`,
 		},
+		// Note that prior to go1.19 this test worked and preserved HTML comments
+		// of the style used by Microsoft to create browser specific sections.
+		//
+		// However as @zhsj notes https://github.com/microcosm-cc/bluemonday/pull/148
+		// the commit https://github.com/golang/net/commit/06994584 broke this.
+		//
+		// I haven't found a way to allow MS style comments without creating a risk
+		// for every user of bluemonday that utilises .AllowComments()
 		{
 			in:       `<!--[if gte mso 9]>Hello<![endif]-->`,
-			expected: `<!--[if gte mso 9]>Hello<![endif]-->`,
+			expected: `<!--[if gte mso 9]&gt;Hello&lt;![endif]-->`,
 		},
 	}
 
