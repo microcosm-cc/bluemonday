@@ -3913,3 +3913,21 @@ func TestIssue147(t *testing.T) {
 			expected)
 	}
 }
+
+func TestRemovingEmptySelfClosingTag(t *testing.T) {
+	p := NewPolicy()
+
+	// Only broke when attribute policy was specified.
+	p.AllowAttrs("type").OnElements("input")
+
+	input := `<input/>`
+	out := p.Sanitize(input)
+	expected := ``
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
