@@ -1151,7 +1151,7 @@ echo('IPT>alert("XSS")</SCRIPT>'); ?>`,
 			expected: ``,
 		},
 		{
-			in: `<IMG SRC="jav	ascript:alert('XSS');">`,
+			in:       `<IMG SRC="jav	ascript:alert('XSS');">`,
 			expected: ``,
 		},
 		{
