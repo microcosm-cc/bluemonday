@@ -37,6 +37,7 @@ import (
 	"strings"
 
 	"github.com/microcosm-cc/bluemonday/css"
+	"golang.org/x/net/html"
 )
 
 // Policy encapsulates the allowlist of HTML elements and attributes that will
@@ -150,6 +151,8 @@ type Policy struct {
 	// and can lead to XSS being rendered thus defeating the purpose of using a
 	// HTML sanitizer.
 	allowUnsafe bool
+
+	callbackAttr callbackAttrFunc
 }
 
 type attrPolicy struct {
@@ -189,6 +192,9 @@ type stylePolicyBuilder struct {
 	enum          []string
 	handler       func(string) bool
 }
+
+// callbackAttrFunc is callback function that will be called whenever element's attributes are parsed. If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
+type callbackAttrFunc = func(elementName string, attrs []html.Attribute) []html.Attribute
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
 
@@ -239,6 +245,13 @@ func NewPolicy() *Policy {
 	p.addDefaultSkipElementContent()
 
 	return &p
+}
+
+// SetCallbackForAttr sets the callback function that will be called whenever element's attributes are parsed. If the callback returns nil or empty array of html attributes then the attributes will not be included in the output. The callback function, if non-nil, will be called before any filtering of the attributes is done.
+// SetCallbackForAttr is not goroutine safe.
+func (p *Policy) SetCallbackForAttr(cb callbackAttrFunc) *Policy {
+	p.callbackAttr = cb
+	return p
 }
 
 // AllowAttrs takes a range of HTML attribute names and returns an

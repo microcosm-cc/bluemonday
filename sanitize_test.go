@@ -37,6 +37,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 // test is a simple input vs output struct used to construct a slice of many
@@ -3930,4 +3932,81 @@ func TestRemovingEmptySelfClosingTag(t *testing.T) {
 			out,
 			expected)
 	}
+}
+
+func TestCallbackForAttributes(t *testing.T) {
+
+	tests := []test{
+		{
+			in:       `<a href="http://www.google.com">`,
+			expected: `<a href="http://www.google.com/ATTR" rel="nofollow noopener" target="_blank">`,
+		},
+		{
+			in:       `<A Href="?q=1">`,
+			expected: `<a href="?q=2">`,
+		},
+		{
+			in:       `<img src="giraffe.gif" />`,
+			expected: `<img src="giraffe1.gif"/>`,
+		},
+		{
+			in:       `<IMG Src="new.gif" />`,
+			expected: ``,
+		},
+	}
+
+	p := UGCPolicy()
+	p.RequireParseableURLs(true)
+	p.RequireNoFollowOnLinks(false)
+	p.RequireNoFollowOnFullyQualifiedLinks(true)
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+
+	p.SetCallbackForAttr(func(elementName string, attrs []html.Attribute) []html.Attribute {
+
+		if elementName == "img" {
+			for i := 0; i < len(attrs); i++ {
+				if attrs[i].Key == "src" && attrs[i].Val == "giraffe.gif" {
+					attrs[i].Val = "giraffe1.gif"
+					break
+				}
+				if attrs[i].Key == "src" && attrs[i].Val == "new.gif" {
+					return nil
+				}
+			}
+		}
+		if elementName == "a" {
+			for i := 0; i < len(attrs); i++ {
+				if attrs[i].Key == "href" && attrs[i].Val == "?q=1" {
+					attrs[i].Val = "?q=2"
+					break
+				}
+				if attrs[i].Key == "href" && attrs[i].Val == "http://www.google.com" {
+					attrs[i].Val = "http://www.google.com/ATTR"
+					break
+				}
+			}
+		}
+
+		return attrs
+	})
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
 }
