@@ -497,6 +497,10 @@ func (p *Policy) sanitizeAttrs(
 	aps map[string][]attrPolicy,
 ) []html.Attribute {
 
+	if p.callbackAttr != nil {
+		attrs = p.callbackAttr(elementName, attrs)
+	}
+
 	if len(attrs) == 0 {
 		return attrs
 	}
