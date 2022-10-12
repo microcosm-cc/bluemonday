@@ -152,6 +152,8 @@ type Policy struct {
 	// HTML sanitizer.
 	allowUnsafe bool
 
+	//callbackAttr is callback function that will be called before element's attributes are parsed. The callback function can add/remove/modify the element's attributes.
+	// If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
 	callbackAttr callbackAttrFunc
 }
 
@@ -193,7 +195,8 @@ type stylePolicyBuilder struct {
 	handler       func(string) bool
 }
 
-// callbackAttrFunc is callback function that will be called whenever element's attributes are parsed. If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
+// callbackAttrFunc is callback function that will be called before element's attributes are parsed. The callback function can add/remove/modify the element's attributes.
+// If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
 type callbackAttrFunc = func(elementName string, attrs []html.Attribute) []html.Attribute
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
@@ -247,9 +250,10 @@ func NewPolicy() *Policy {
 	return &p
 }
 
-// SetCallbackForAttr sets the callback function that will be called whenever element's attributes are parsed. If the callback returns nil or empty array of html attributes then the attributes will not be included in the output. The callback function, if non-nil, will be called before any filtering of the attributes is done.
-// SetCallbackForAttr is not goroutine safe.
-func (p *Policy) SetCallbackForAttr(cb callbackAttrFunc) *Policy {
+// SetCallbackForAttributes sets the callback function that will be called before element's attributes are parsed. The callback function can add/remove/modify the element's attributes.
+// If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
+// SetCallbackForAttributes is not goroutine safe.
+func (p *Policy) SetCallbackForAttributes(cb callbackAttrFunc) *Policy {
 	p.callbackAttr = cb
 	return p
 }

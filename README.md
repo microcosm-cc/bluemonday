@@ -262,6 +262,13 @@ p.AllowAttrs("style").OnElements("span", "p")
 p.AllowStyles("color").MatchingHandler(myHandler).Globally()
 ```
 
+If you need to add/modify/delete the attributes of a given element you can use set a callback function with  SetCallbackForAttributes. This function accepts argument:
+```go
+func(elementName string, attrs []html.Attribute) []html.Attribute
+```
+that will be called before the element's attributes are parsed. The callback function can add/remove/modify the element's attributes. 
+If the callback returns nil or empty array of html attributes then the attributes will not be included in the output.
+
 ### Links
 
 Links are difficult beasts to sanitise safely and also one of the biggest attack vectors for malicious content.

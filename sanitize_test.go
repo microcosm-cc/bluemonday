@@ -3961,7 +3961,7 @@ func TestCallbackForAttributes(t *testing.T) {
 	p.RequireNoFollowOnFullyQualifiedLinks(true)
 	p.AddTargetBlankToFullyQualifiedLinks(true)
 
-	p.SetCallbackForAttr(func(elementName string, attrs []html.Attribute) []html.Attribute {
+	p.SetCallbackForAttributes(func(elementName string, attrs []html.Attribute) []html.Attribute {
 
 		if elementName == "img" {
 			for i := 0; i < len(attrs); i++ {
