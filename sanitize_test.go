@@ -3931,3 +3931,37 @@ func TestRemovingEmptySelfClosingTag(t *testing.T) {
 			expected)
 	}
 }
+
+func TestIssue161(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/161
+	//
+	// ```
+	// p.AllowElementsMatching(regexp.MustCompile(`^custom-`))
+	// p.AllowNoAttrs().Matching(regexp.MustCompile(`^custom-`))
+	// ```
+	// This does not work as expected. This looks like a limitation, and the
+	// question is whether the matching has to be applied in a second location
+	// to overcome the limitation.
+	//
+	// However the issue is really that the `.Matching()` returns an attribute
+	// test that has to be bound to some elements, it isn't a global test.
+	//
+	// This should work:
+	// ```
+	// p.AllowNoAttrs().Matching(regexp.MustCompile(`^custom-`)).OnElementsMatching(regexp.MustCompile(`^custom-`))
+	// ```
+	p := UGCPolicy()
+	p.AllowElements("picture", "source")
+	p.AllowAttrs("srcset", "src", "type", "media").OnElements("source")
+
+	input := `<picture><source src="b.jpg" media="(prefers-color-scheme: dark)"></source><img src="a.jpg"></picture>`
+	out := p.Sanitize(input)
+	expected := input
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
