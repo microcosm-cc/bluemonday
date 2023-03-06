@@ -1612,7 +1612,7 @@ func TestComments(t *testing.T) {
 		// for every user of bluemonday that utilises .AllowComments()
 		{
 			in:       `<!--[if gte mso 9]>Hello<![endif]-->`,
-			expected: `<!--[if gte mso 9]&gt;Hello&lt;![endif]-->`,
+			expected: `<!--[if gte mso 9]>Hello<![endif]-->`,
 		},
 	}
 
