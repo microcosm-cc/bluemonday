@@ -298,10 +298,6 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				if !p.allowUnsafe {
 					continue
 				}
-			case `style`:
-				if !p.allowUnsafe {
-					continue
-				}
 			}
 
 			aps, ok := p.elsAndAttrs[token.Data]
@@ -355,10 +351,6 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				if !p.allowUnsafe {
 					continue
 				}
-			case `style`:
-				if !p.allowUnsafe {
-					continue
-				}
 			}
 
 			if skipClosingTag && closingTagToSkipStack[len(closingTagToSkipStack)-1] == token.Data {
@@ -408,10 +400,6 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 
 			switch normaliseElementName(token.Data) {
 			case `script`:
-				if !p.allowUnsafe {
-					continue
-				}
-			case `style`:
 				if !p.allowUnsafe {
 					continue
 				}

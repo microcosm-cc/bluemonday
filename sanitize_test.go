@@ -3246,7 +3246,7 @@ func TestInsertionModeSanitization(t *testing.T) {
 	tests := []test{
 		{
 			in:       `<select><option><style><script>alert(1)</script>`,
-			expected: `<select><option>`,
+			expected: `<select><option><style>`,
 		},
 	}
 
