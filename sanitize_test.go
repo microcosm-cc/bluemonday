@@ -3965,3 +3965,23 @@ func TestIssue161(t *testing.T) {
 			expected)
 	}
 }
+
+func TestIssue171(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/171
+	//
+	// Trailing spaces in the style attribute should not cause the value to be omitted
+	p := UGCPolicy()
+	p.AllowAttrs("style").OnElements("p")
+	p.AllowStyles("color", "text-align").OnElements("p")
+
+	input := `<p style="color: red; text-align: center;   "></p>`
+	out := p.Sanitize(input)
+	expected := `<p style="color: red; text-align: center"></p>`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
