@@ -3985,3 +3985,26 @@ func TestIssue171(t *testing.T) {
 			expected)
 	}
 }
+
+func TestIssue174(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/174
+	//
+	// Allow all URL schemes
+	p := UGCPolicy()
+	p.AllowURLSchemesMatching(regexp.MustCompile(`.+`))
+
+	input := `<a href="cbthunderlink://somebase64string"></a>
+<a href="matrix:roomid/psumPMeAfzgAeQpXMG:feneas.org?action=join"></a>
+<a href="https://github.com"></a>`
+	out := p.Sanitize(input)
+	expected := `<a href="cbthunderlink://somebase64string" rel="nofollow"></a>
+<a href="matrix:roomid/psumPMeAfzgAeQpXMG:feneas.org?action=join" rel="nofollow"></a>
+<a href="https://github.com" rel="nofollow"></a>`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}
