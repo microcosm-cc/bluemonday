@@ -150,16 +150,27 @@ func TestLinks(t *testing.T) {
 		},
 		{
 			in:       `<img src="giraffe.gif" />`,
-			expected: `<img src="giraffe.gif"/>`,
+			expected: `<img src="https://proxy.example.com/?u=giraffe.gif"/>`,
 		},
 		{
 			in:       `<img src="giraffe.gif?height=500&amp;width=500&amp;flag" />`,
-			expected: `<img src="giraffe.gif?height=500&amp;width=500&amp;flag"/>`,
+			expected: `<img src="https://proxy.example.com/?u=giraffe.gif?height=500&amp;width=500&amp;flag"/>`,
 		},
 	}
 
 	p := UGCPolicy()
 	p.RequireParseableURLs(true)
+	p.RewriteSrc(func(u *url.URL) {
+		// Proxify all requests to "https://proxy.example.com/?u=http://example.com/"
+		// This is a contrived example, but it shows how to rewrite URLs
+		// to proxy all requests through a single URL.
+
+		url := u.String()
+		u.Scheme = "https"
+		u.Host = "proxy.example.com"
+		u.Path = "/"
+		u.RawQuery = "u=" + url
+	})
 
 	// These tests are run concurrently to enable the race detector to pick up
 	// potential issues
