@@ -118,7 +118,11 @@ type Policy struct {
 	allowURLSchemes map[string][]urlPolicy
 
 	// These regexps are used to match allowed URL schemes, for example
-	// if one would want to allow all URL schemes, they would add `.+`
+	// if one would want to allow all URL schemes, they would add `.+`.
+	// However pay attention as this can lead to XSS being rendered thus
+	// defeating the purpose of using a HTML sanitizer.
+	// The regexps are only considered if a schema was not explicitly
+	// handled by `AllowURLSchemes` or `AllowURLSchemeWithCustomPolicy`.
 	allowURLSchemeRegexps []*regexp.Regexp
 
 	// If an element has had all attributes removed as a result of a policy

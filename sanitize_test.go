@@ -4007,4 +4007,22 @@ func TestIssue174(t *testing.T) {
 			out,
 			expected)
 	}
+
+	// Custom handling of specific URL schemes even if the regex allows all
+	p.AllowURLSchemeWithCustomPolicy("javascript", func(*url.URL) bool {
+		return false
+	})
+
+	input = `<a href="cbthunderlink://somebase64string"></a>
+<a href="javascript:alert('test')">xss</a>`
+	out = p.Sanitize(input)
+	expected = `<a href="cbthunderlink://somebase64string" rel="nofollow"></a>
+xss`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
 }

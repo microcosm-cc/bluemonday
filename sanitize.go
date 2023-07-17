@@ -970,14 +970,14 @@ func (p *Policy) validURL(rawurl string) (string, bool) {
 		}
 
 		if u.Scheme != "" {
-			for _, r := range p.allowURLSchemeRegexps {
-				if r.MatchString(u.Scheme) {
-					return u.String(), true
-				}
-			}
-
 			urlPolicies, ok := p.allowURLSchemes[u.Scheme]
 			if !ok {
+				for _, r := range p.allowURLSchemeRegexps {
+					if r.MatchString(u.Scheme) {
+						return u.String(), true
+					}
+				}
+
 				return "", false
 			}
 
