@@ -49,7 +49,7 @@ type test struct {
 func TestEmpty(t *testing.T) {
 	p := StrictPolicy()
 
-	if "" != p.Sanitize(``) {
+	if p.Sanitize(``) != `` {
 		t.Error("Empty string is not empty")
 	}
 }
@@ -459,10 +459,7 @@ func TestGlobalURLPatternsViaCustomPolicy(t *testing.T) {
 		"https",
 		func(url *url.URL) bool {
 			// Allow YouTube
-			if url.Host == `www.youtube.com` {
-				return true
-			}
-			return false
+			return url.Host == `www.youtube.com`
 		},
 	)
 
