@@ -9,4 +9,4 @@ require (
 
 require github.com/gorilla/css v1.0.0 // indirect
 
-retract [v1.0.0, v1.0.22] // Retract older versions as only latest is to be depended upon
+retract [v1.0.0, v1.0.24] // Retract older versions as only latest is to be depended upon
