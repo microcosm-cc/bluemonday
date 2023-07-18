@@ -584,6 +584,10 @@ func (p *Policy) AllowURLSchemesMatching(r *regexp.Regexp) *Policy {
 
 // RewriteSrc will rewrite the src attribute of a resource downloading tag
 // (e.g. <img>, <script>, <iframe>) using the provided function.
+//
+// For a mail provider, this can be used to proxify requests and prevent
+// the sender from learning the IP address of the recipient and / or
+// whether the recipient has opened the email (and when / how often).
 func (p *Policy) RewriteSrc(fn urlRewriter) *Policy {
 	p.srcRewriter = fn
 	return p
