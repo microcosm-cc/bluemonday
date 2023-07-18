@@ -589,9 +589,25 @@ func (p *Policy) AllowURLSchemesMatching(r *regexp.Regexp) *Policy {
 // RewriteSrc will rewrite the src attribute of a resource downloading tag
 // (e.g. <img>, <script>, <iframe>) using the provided function.
 //
-// For a mail provider, this can be used to proxify requests and prevent
-// the sender from learning the IP address of the recipient and / or
-// whether the recipient has opened the email (and when / how often).
+// Typically the use case here is that if the content that we're sanitizing
+// is untrusted then the content that is inlined is also untrusted.
+// To prevent serving this content on the same domain as the content appears
+// on it is good practise to proxy the content through an additional domain
+// name as this will force the web client to consider the inline content as
+// third party to the main content, thus providing browser isolation around
+// the inline content.
+//
+// An example of this is a web mail provider like fastmail.com , when an
+// email (user generated content) is displayed, the email text is shown on
+// fastmail.com but the inline attachments and content are rendered from
+// fastmailusercontent.com . This proxying of the external content on a
+// domain that is different to the content domain forces the browser domain
+// security model to kick in. Note that this only applies to differences
+// below the suffix (as per the publix suffix list).
+//
+// This is a good practise to adopt as it prevents the content from being
+// able to set cookies on the main domain and thus prevents the content on
+// the main domain from being able to read those cookies.
 func (p *Policy) RewriteSrc(fn urlRewriter) *Policy {
 	p.srcRewriter = fn
 	return p
