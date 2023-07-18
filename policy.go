@@ -125,6 +125,11 @@ type Policy struct {
 	// handled by `AllowURLSchemes` or `AllowURLSchemeWithCustomPolicy`.
 	allowURLSchemeRegexps []*regexp.Regexp
 
+	// If srcRewriter is not nil, it is used to rewrite the src attribute
+	// of tags that download resources, such as <img> and <script>.
+	// It requires that the URL is parsable by "net/url" url.Parse().
+	srcRewriter urlRewriter
+
 	// If an element has had all attributes removed as a result of a policy
 	// being applied, then the element would be removed from the output.
 	//
@@ -199,6 +204,8 @@ type stylePolicyBuilder struct {
 }
 
 type urlPolicy func(url *url.URL) (allowUrl bool)
+
+type urlRewriter func(*url.URL)
 
 type SandboxValue int64
 
@@ -576,6 +583,17 @@ func (p *Policy) AllowElementsMatching(regex *regexp.Regexp) *Policy {
 // match a regexp.
 func (p *Policy) AllowURLSchemesMatching(r *regexp.Regexp) *Policy {
 	p.allowURLSchemeRegexps = append(p.allowURLSchemeRegexps, r)
+	return p
+}
+
+// RewriteSrc will rewrite the src attribute of a resource downloading tag
+// (e.g. <img>, <script>, <iframe>) using the provided function.
+//
+// For a mail provider, this can be used to proxify requests and prevent
+// the sender from learning the IP address of the recipient and / or
+// whether the recipient has opened the email (and when / how often).
+func (p *Policy) RewriteSrc(fn urlRewriter) *Policy {
+	p.srcRewriter = fn
 	return p
 }
 

@@ -612,6 +612,14 @@ attrsLoop:
 				case "audio", "embed", "iframe", "img", "script", "source", "track", "video":
 					if htmlAttr.Key == "src" {
 						if u, ok := p.validURL(htmlAttr.Val); ok {
+							if p.srcRewriter != nil {
+								parsedURL, err := url.Parse(u)
+								if err != nil {
+									fmt.Println(err)
+								}
+								p.srcRewriter(parsedURL)
+								u = parsedURL.String()
+							}
 							htmlAttr.Val = u
 							tmpAttrs = append(tmpAttrs, htmlAttr)
 						}
