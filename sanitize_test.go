@@ -4034,3 +4034,28 @@ xss`
 			expected)
 	}
 }
+
+func FuzzSanitizeBytes(f *testing.F) {
+
+	f.Add([]byte("Hi.\n"))
+	f.Add([]byte("\t\n \n\t"))
+
+	f.Fuzz(func(t *testing.T, input []byte) {
+
+		p := UGCPolicy()
+		p.SanitizeBytes(input)
+	})
+}
+
+//sanitizedURL
+
+func FuzzSanitizedURL(f *testing.F) {
+
+	f.Add(`http://abc.com?d=1&a=2&a=3`)
+	f.Add(`http://abc.com?d=1&a=2&a=3#abc`)
+
+	f.Fuzz(func(t *testing.T, input string) {
+
+		sanitizedURL(input)
+	})
+}

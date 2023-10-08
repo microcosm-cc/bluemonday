@@ -46,3 +46,7 @@ cover:
 
 install:
 	@go install ./...
+
+fuzz:
+	@go test -fuzz=FuzzSanitizeBytes	.
+	@go test -fuzz=FuzzSanitizedURL		.
