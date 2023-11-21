@@ -148,7 +148,7 @@ func (p *Policy) AllowStandardAttributes() {
 	p.AllowAttrs("dir").Matching(Direction).Globally()
 	p.AllowAttrs(
 		"lang",
-	).Matching(regexp.MustCompile(`[a-zA-Z]{2,20}`)).Globally()
+	).Matching(regexp.MustCompile(`^[a-zA-Z]{2,20}$`)).Globally()
 
 	// "id" is permitted. This is pretty much as some HTML elements require this
 	// to work well ("dfn" is an example of a "id" being value)
@@ -156,7 +156,7 @@ func (p *Policy) AllowStandardAttributes() {
 	// might identify the wrong elements. Ensure that you select things
 	// accurately
 	p.AllowAttrs("id").Matching(
-		regexp.MustCompile(`[a-zA-Z0-9\:\-_\.]+`),
+		regexp.MustCompile(`^[a-zA-Z0-9\:\-_\.]+$`),
 	).Globally()
 
 	// "title" is permitted as it improves accessibility.
