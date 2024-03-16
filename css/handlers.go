@@ -240,7 +240,7 @@ var (
 		"unicode-bidi":               UnicodeBidiHandler,
 		"user-select":                UserSelectHandler,
 		"vertical-align":             VerticalAlignHandler,
-		"visibility":                 VisiblityHandler,
+		"visibility":                 VisibilityHandler,
 		"white-space":                WhiteSpaceHandler,
 		"widows":                     OrphansHandler,
 		"width":                      WidthHandler,
@@ -1958,7 +1958,7 @@ func VerticalAlignHandler(value string) bool {
 	return in(splitVals, values)
 }
 
-func VisiblityHandler(value string) bool {
+func VisibilityHandler(value string) bool {
 	values := []string{"visible", "hidden", "collapse", "initial", "inherit"}
 	splitVals := splitValues(value)
 	return in(splitVals, values)

@@ -3,7 +3,7 @@
 #   all:          Builds the code locally after testing
 #
 #   fmt:          Formats the source files
-#   fmt-check:    Check if the source files are formated
+#   fmt-check:    Check if the source files are formatted
 #   build:        Builds the code locally
 #   vet:          Vets the code
 #   staticcheck:  Runs staticcheck over the code
