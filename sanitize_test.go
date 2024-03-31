@@ -2029,6 +2029,10 @@ func TestDefaultStyleHandlers(t *testing.T) {
 			expected: `<div style="column-rule-color: #ff00ff"></div>`,
 		},
 		{
+			in:       `<div style="column-rule-color: #f0ff;"></div>`,
+			expected: `<div style="column-rule-color: #f0ff"></div>`,
+		},
+		{
 			in:       `<div style="column-rule: red;"></div>`,
 			expected: `<div style="column-rule: red"></div>`,
 		},
