@@ -7,10 +7,6 @@ require (
 	golang.org/x/net v0.17.0
 )
 
-require (
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
-	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/gorilla/css v1.0.0 // indirect
-)
+require github.com/gorilla/css v1.0.0 // indirect
 
 retract [v1.0.0, v1.0.25] // Retract older versions as only latest is to be depended upon
