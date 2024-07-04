@@ -4038,3 +4038,39 @@ xss`
 			expected)
 	}
 }
+
+func TestXSSGo18(t *testing.T) {
+	p := UGCPolicy()
+
+	tests := []test{
+		{
+			in:       `<IMG SRC="jav&#x0D;ascript:alert('XSS');">`,
+			expected: ``,
+		},
+		{
+			in:       "<IMG SRC=`javascript:alert(\"RSnake says, 'XSS'\")`>",
+			expected: ``,
+		},
+	}
+
+	// These tests are run concurrently to enable the race detector to pick up
+	// potential issues
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

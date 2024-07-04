@@ -56,14 +56,6 @@ The policy containing the allowlist is applied using a fast non-validating, forw
 
 We expect to be supplied with well-formatted HTML (closing elements for every applicable open element, nested correctly) and so we do not focus on repairing badly nested or incomplete HTML. We focus on simply ensuring that whatever elements do exist are described in the policy allowlist and that attributes and links are safe for use on your web page. [GIGO](http://en.wikipedia.org/wiki/Garbage_in,_garbage_out) does apply and if you feed it bad HTML bluemonday is not tasked with figuring out how to make it good again.
 
-### Supported Go Versions
-
-bluemonday is tested on all versions since Go 1.2 including tip.
-
-We do not support Go 1.0 as we depend on `golang.org/x/net/html` which includes a reference to `io.ErrNoProgress` which did not exist in Go 1.0.
-
-We support Go 1.1 but Travis no longer tests against it.
-
 ## Is it production ready?
 
 *Yes*

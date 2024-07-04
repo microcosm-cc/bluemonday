@@ -1087,3 +1087,8 @@ func normaliseElementName(str string) string {
 		`"`,
 	)
 }
+
+type stringWriterWriter interface {
+	io.Writer
+	io.StringWriter
+}
