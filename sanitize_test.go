@@ -4088,3 +4088,23 @@ func TestXSSGo18(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestIssue208(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/208
+
+	p := NewPolicy()
+	p.AllowElements("span")
+	p.AllowAttrs("title").Matching(Paragraph).Globally()
+	p.AllowAttrs("title").Matching(regexp.MustCompile(`.*`)).Globally()
+
+	input := `<span title="a">b</span>`
+	out := p.Sanitize(input)
+	expected := `<span title="a">b</span>`
+	if out != expected {
+		t.Errorf(
+			"test failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+			input,
+			out,
+			expected)
+	}
+}

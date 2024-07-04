@@ -529,9 +529,11 @@ attrsLoop:
 				if ap.regexp != nil {
 					if ap.regexp.MatchString(htmlAttr.Val) {
 						cleanAttrs = append(cleanAttrs, htmlAttr)
+						continue attrsLoop
 					}
 				} else {
 					cleanAttrs = append(cleanAttrs, htmlAttr)
+					continue attrsLoop
 				}
 			}
 		}
