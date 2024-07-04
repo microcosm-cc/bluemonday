@@ -762,10 +762,10 @@ attrsLoop:
 		switch elementName {
 		case "audio", "img", "link", "script", "video":
 			var crossOriginFound bool
-			for _, htmlAttr := range cleanAttrs {
+			for i, htmlAttr := range cleanAttrs {
 				if htmlAttr.Key == "crossorigin" {
 					crossOriginFound = true
-					htmlAttr.Val = "anonymous"
+					cleanAttrs[i].Val = "anonymous"
 				}
 			}
 

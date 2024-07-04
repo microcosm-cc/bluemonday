@@ -3695,6 +3695,10 @@ func TestIssue107(t *testing.T) {
 	p := UGCPolicy()
 	p.RequireCrossOriginAnonymous(true)
 
+	p1 := UGCPolicy()
+	p1.RequireCrossOriginAnonymous(true)
+	p1.AllowAttrs("crossorigin").Globally()
+
 	tests := []test{
 		{
 			in:       `<img src="/path" />`,
@@ -3720,6 +3724,16 @@ func TestIssue107(t *testing.T) {
 			if out != tt.expected {
 				t.Errorf(
 					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			out = p1.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed with policy p1;\ninput   : %s\noutput  : %s\nexpected: %s",
 					ii,
 					tt.in,
 					out,
