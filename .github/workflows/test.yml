@@ -19,6 +19,12 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - name: Vet
+      run: go vet ./...
+    - name: Staticcheck
+      run: |
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        staticcheck ./...
     - name: Test
       run: go test -v -race ./...
 

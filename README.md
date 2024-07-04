@@ -68,7 +68,7 @@ We invite pull requests and issues to help us ensure we are offering comprehensi
 
 ## Usage
 
-Install in your `${GOPATH}` using `go get -u github.com/microcosm-cc/bluemonday`
+Install using `go get github.com/microcosm-cc/bluemonday`
 
 Then call it:
 ```go
@@ -379,30 +379,6 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 * Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that encapsulates 90% of what they're looking for but does more than they need, and to remove the extra things they do not want to make it 100% what they want
 * Investigate whether devs want a validating HTML mode, in which the HTML elements are not just transformed into a balanced tree (every start tag has a closing tag at the correct depth) but also that elements and character data appear only in their allowed context (i.e. that a `table` element isn't a descendent of a `caption`, that `colgroup`, `thead`, `tbody`, `tfoot` and `tr` are permitted, and that character data is not permitted)
-
-## Development
-
-If you have cloned this repo you will probably need the dependency:
-
-`go get golang.org/x/net/html`
-
-Gophers can use their familiar tools:
-
-`go build`
-
-`go test`
-
-I personally use a Makefile as it spares typing the same args over and over whilst providing consistency for those of us who jump from language to language and enjoy just typing `make` in a project directory and watch magic happen.
-
-`make` will build, vet, test and install the library.
-
-`make clean` will remove the library from a *single* `${GOPATH}/pkg` directory tree
-
-`make test` will run the tests
-
-`make cover` will run the tests and *open a browser window* with the coverage report
-
-`make lint` will run golint (install via `go get github.com/golang/lint/golint`)
 
 ## Long term goals
 
