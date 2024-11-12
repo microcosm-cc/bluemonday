@@ -317,7 +317,7 @@ p.AllowDataURIImages()
 
 That helper will enable GIF, JPEG, PNG and WEBP images.
 
-It should be noted that there is a potential [security](http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/) [risk](https://capec.mitre.org/data/definitions/244.html) with the use of data URI links. You should only enable data URI links if you already trust the content.
+It should be noted that there is a potential [security](https://web.archive.org/web/20120427103111/http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/) [risk](https://capec.mitre.org/data/definitions/244.html) with the use of data URI links. You should only enable data URI links if you already trust the content.
 
 We also have some features to help deal with user generated content:
 ```go
