@@ -1748,6 +1748,10 @@ func TestDefaultStyleHandlers(t *testing.T) {
 			expected: `<div style="background-color: coral"></div>`,
 		},
 		{
+			in:       `<div style="background-color: transparent"></div>`,
+			expected: `<div style="background-color: transparent"></div>`,
+		},
+		{
 			in: `<div style="background-image: url('http://paper.gif')">` +
 				`</div><div style="background-image: inherit"></div>`,
 			expected: `<div style="background-image: ` +
