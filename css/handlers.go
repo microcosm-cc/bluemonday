@@ -250,9 +250,9 @@ var (
 		"writing-mode":               WritingModeHandler,
 		"z-index":                    ZIndexHandler,
 	}
-	colorValues = []string{"initial", "inherit", "aliceblue", "antiquewhite",
-		"aqua", "aquamarine", "azure", "beige", "bisque", "black",
-		"blanchedalmond", "blue", "blueviolet", "brown", "burlywood",
+	colorValues = []string{"transparent", "initial", "inherit", "aliceblue",
+		"antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque",
+		"black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood",
 		"cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue",
 		"cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod",
 		"darkgray", "darkgrey", "darkgreen", "darkkhaki", "darkmagenta",
