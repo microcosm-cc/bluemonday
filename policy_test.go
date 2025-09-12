@@ -297,3 +297,32 @@ func TestStyleOnElementMatching(t *testing.T) {
 		}
 	}
 }
+
+func TestAllowUnsafeText(t *testing.T) {
+	policy := NewPolicy().AllowUnsafeText(true)
+
+	tests := []struct {
+		in       string
+		expected string
+	}{
+		{
+			in:       "<script>var a = 10; alert(a);</script>",
+			expected: "",
+		},
+		{
+			in:       "<style>body { background: red; }</style>",
+			expected: "",
+		},
+		{
+			in:       "<div>&[]<></div>",
+			expected: "&[]<>",
+		},
+	}
+
+	for _, test := range tests {
+		out := policy.Sanitize(test.in)
+		if out != test.expected {
+			t.Errorf("allowUnsafeText: got '%s', want '%s'", out, test.expected)
+		}
+	}
+}

@@ -29,8 +29,8 @@
 
 package bluemonday
 
-//TODO sgutzwiller create map of styles to default handlers
-//TODO sgutzwiller create handlers for various attributes
+// TODO sgutzwiller create map of styles to default handlers
+// TODO sgutzwiller create handlers for various attributes
 import (
 	"net/url"
 	"regexp"
@@ -162,7 +162,8 @@ type Policy struct {
 	// policy declares them. However this is not recommended under any circumstance
 	// and can lead to XSS being rendered thus defeating the purpose of using a
 	// HTML sanitizer.
-	allowUnsafe bool
+	allowUnsafe     bool
+	allowUnsafeText bool
 }
 
 type attrPolicy struct {
@@ -865,6 +866,12 @@ func (p *Policy) AllowElementsContent(names ...string) *Policy {
 func (p *Policy) AllowUnsafe(allowUnsafe bool) *Policy {
 	p.init()
 	p.allowUnsafe = allowUnsafe
+	return p
+}
+
+func (p *Policy) AllowUnsafeText(allowUnsafeText bool) *Policy {
+	p.init()
+	p.allowUnsafeText = allowUnsafeText
 	return p
 }
 

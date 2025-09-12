@@ -439,9 +439,15 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 						}
 					}
 				default:
-					// HTML escape the text
-					if _, err := buff.WriteString(token.String()); err != nil {
-						return err
+					if p.allowUnsafeText {
+						if _, err := buff.WriteString(token.Data); err != nil {
+							return err
+						}
+					} else {
+						// HTML escape the text
+						if _, err := buff.WriteString(token.String()); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -826,7 +832,7 @@ func (p *Policy) sanitizeStyles(attr html.Attribute, elementName string) html.At
 		}
 	}
 
-	//Add semi-colon to end to fix parsing issue
+	// Add semi-colon to end to fix parsing issue
 	attr.Val = strings.TrimRight(attr.Val, " ")
 	if len(attr.Val) > 0 && attr.Val[len(attr.Val)-1] != ';' {
 		attr.Val = attr.Val + ";"
