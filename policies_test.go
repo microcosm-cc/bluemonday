@@ -178,6 +178,7 @@ func TestUGCPolicy(t *testing.T) {
 	}
 
 	p := UGCPolicy()
+	p.DisableOutputTrimSpaces(true)
 
 	for ii, test := range tests {
 		out := p.Sanitize(test.in)
