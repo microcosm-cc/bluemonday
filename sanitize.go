@@ -61,8 +61,14 @@ func (p *Policy) Sanitize(s string) string {
 	if strings.TrimSpace(s) == "" {
 		return s
 	}
+	str := p.sanitizeWithBuff(strings.NewReader(s)).String()
 
-	return p.sanitizeWithBuff(strings.NewReader(s)).String()
+	// If the user has disabled trimming spaces, we will return the string as-is.
+	if p.disableOutputTrimSpaces {
+		return str
+	}
+
+	return strings.TrimSpace(str)
 }
 
 // SanitizeBytes takes a []byte that contains a HTML fragment or document and applies

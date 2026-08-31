@@ -57,6 +57,7 @@ func TestEmpty(t *testing.T) {
 func TestSignatureBehaviour(t *testing.T) {
 	// https://github.com/microcosm-cc/bluemonday/issues/8
 	p := UGCPolicy()
+	p.DisableOutputTrimSpaces(true)
 
 	input := "Hi.\n"
 
@@ -90,6 +91,18 @@ func TestSignatureBehaviour(t *testing.T) {
 	).String(); output != input {
 
 		t.Errorf(`SanitizeReader() input = %s, output = %s`, input, output)
+	}
+}
+
+func TestDisableOutputTrimSpaces(t *testing.T) {
+	input := "  <p>hello   </p>  "
+
+	if output := NewPolicy().Sanitize(input); output != "hello" {
+		t.Fatalf("Sanitize() default trim = %q, want %q", output, "hello")
+	}
+	result := "  hello     "
+	if output := NewPolicy().DisableOutputTrimSpaces(true).Sanitize(input); output != result {
+		t.Fatalf("Sanitize() disabled trim = %q, want %q", output, result)
 	}
 }
 
@@ -541,6 +554,7 @@ func TestAntiSamy(t *testing.T) {
 	p.AllowAttrs("char").Matching(
 		regexp.MustCompile(`p{L}`), // Single character or HTML entity only
 	).OnElements("td")
+	p.DisableOutputTrimSpaces(true)
 
 	tests := []test{
 		// Base64 strings
@@ -894,6 +908,7 @@ func TestAntiSamy(t *testing.T) {
 func TestXSS(t *testing.T) {
 
 	p := UGCPolicy()
+	p.DisableOutputTrimSpaces(true)
 
 	tests := []test{
 		{
@@ -1330,6 +1345,7 @@ func TestTagSkipClosingTagNested(t *testing.T) {
 func TestAddSpaces(t *testing.T) {
 	p := UGCPolicy()
 	p.AddSpaceWhenStrippingTag(true)
+	p.DisableOutputTrimSpaces(true)
 
 	tests := []test{
 		{

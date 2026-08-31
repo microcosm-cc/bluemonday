@@ -163,6 +163,9 @@ type Policy struct {
 	// and can lead to XSS being rendered thus defeating the purpose of using a
 	// HTML sanitizer.
 	allowUnsafe bool
+
+	// When true, stop trimming spaces from the beginning and end of the output string for Sanitize function only. This is useful if you want to preserve leading and trailing whitespace in the output string.
+	disableOutputTrimSpaces bool
 }
 
 type attrPolicy struct {
@@ -240,6 +243,7 @@ func (p *Policy) init() {
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
 		p.initialized = true
+		p.disableOutputTrimSpaces = false
 	}
 }
 
@@ -987,4 +991,11 @@ func (p *Policy) addDefaultSkipElementContent() {
 	p.setOfElementsToSkipContent["script"] = struct{}{}
 	p.setOfElementsToSkipContent["style"] = struct{}{}
 	p.setOfElementsToSkipContent["title"] = struct{}{}
+}
+
+// DisableOutputTrimSpaces disables trimming spaces from the beginning and end of the output string for Sanitize function only. This is useful if you want to preserve leading and trailing whitespace in the output string.
+func (p *Policy) DisableOutputTrimSpaces(disable bool) *Policy {
+	p.disableOutputTrimSpaces = disable
+
+	return p
 }

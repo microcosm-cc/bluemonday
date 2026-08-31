@@ -7,36 +7,47 @@ bluemonday takes untrusted user generated content as an input, and will return H
 If you accept user generated content, and your server uses Go, you **need** bluemonday.
 
 The default policy for user generated content (`bluemonday.UGCPolicy().Sanitize()`) turns this:
+
 ```html
-Hello <STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>World
+Hello
+<style>
+  .XSS {
+    background-image: url("javascript:alert('XSS')");
+  }</style
+><a class="XSS"></a>World
 ```
 
 Into a harmless:
+
 ```html
 Hello World
 ```
 
 And it turns this:
+
 ```html
-<a href="javascript:alert('XSS1')" onmouseover="alert('XSS2')">XSS<a>
+<a href="javascript:alert('XSS1')" onmouseover="alert('XSS2')">XSS<a></a></a>
 ```
 
 Into this:
+
 ```html
 XSS
 ```
 
 Whilst still allowing this:
+
 ```html
 <a href="http://www.google.com/">
-  <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png"/>
+  <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png" />
 </a>
 ```
 
 To pass through mostly unaltered (it gained a rel="nofollow" which is a good thing for user generated content):
+
 ```html
 <a href="http://www.google.com/" rel="nofollow">
-  <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png"/>
+  <img src="https://ssl.gstatic.com/accounts/ui/logo_2x.png" />
 </a>
 ```
 
@@ -58,7 +69,7 @@ We expect to be supplied with well-formatted HTML (closing elements for every ap
 
 ## Is it production ready?
 
-*Yes*
+_Yes_
 
 We are using bluemonday in production having migrated from the widely used and heavily field tested OWASP Java HTML Sanitizer.
 
@@ -71,6 +82,7 @@ We invite pull requests and issues to help us ensure we are offering comprehensi
 Install using `go get github.com/microcosm-cc/bluemonday`
 
 Then call it:
+
 ```go
 package main
 
@@ -97,15 +109,25 @@ func main() {
 ```
 
 We offer three ways to call Sanitize:
+
 ```go
 p.Sanitize(string) string
 p.SanitizeBytes([]byte) []byte
 p.SanitizeReader(io.Reader) bytes.Buffer
 ```
 
+By default, `Sanitize` trims leading and trailing whitespace from the output. If you need to preserve surrounding spaces for a specific policy, disable that behavior:
+
+```go
+p := bluemonday.UGCPolicy().DisableOutputTrimSpaces(true)
+html := p.Sanitize("  Hello <b>world</b>  ")
+// html == "  Hello <b>world</b>  "
+```
+
 If you are obsessed about performance, `p.SanitizeReader(r).Bytes()` will return a `[]byte` without performing any unnecessary casting of the inputs or outputs. Though the difference is so negligible you should never need to care.
 
 You can build your own policies:
+
 ```go
 package main
 
@@ -138,12 +160,12 @@ func main() {
 
 We ship two default policies:
 
-1. `bluemonday.StrictPolicy()` which can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on its allowlist. An example usage scenario would be blog post titles where HTML tags are not expected at all and if they are then the elements *and* the content of the elements should be stripped. This is a *very* strict policy.
-2. `bluemonday.UGCPolicy()` which allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does *not* allow iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
+1. `bluemonday.StrictPolicy()` which can be thought of as equivalent to stripping all HTML elements and their attributes as it has nothing on its allowlist. An example usage scenario would be blog post titles where HTML tags are not expected at all and if they are then the elements _and_ the content of the elements should be stripped. This is a _very_ strict policy.
+2. `bluemonday.UGCPolicy()` which allows a broad selection of HTML elements and attributes that are safe for user generated content. Note that this policy does _not_ allow iframes, object, embed, styles, script, etc. An example usage scenario would be blog post bodies where a variety of formatting is expected along with the potential for TABLEs and IMGs.
 
 ## Policy Building
 
-The essence of building a policy is to determine which HTML elements and attributes are considered safe for your scenario. OWASP provide an [XSS prevention cheat sheet](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet) to help explain the risks, but essentially:
+The essence of building a policy is to determine which HTML elements and attributes are considered safe for your scenario. OWASP provide an [XSS prevention cheat sheet](<https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet>) to help explain the risks, but essentially:
 
 1. Avoid anything other than the standard HTML elements
 1. Avoid `script`, `style`, `iframe`, `object`, `embed`, `base` elements that allow code to be executed by the client or third party content to be included that can execute code
@@ -152,11 +174,13 @@ The essence of building a policy is to determine which HTML elements and attribu
 Basically, you should be able to describe what HTML is fine for your scenario. If you do not have confidence that you can describe your policy please consider using one of the shipped policies such as `bluemonday.UGCPolicy()`.
 
 To create a new policy:
+
 ```go
 p := bluemonday.NewPolicy()
 ```
 
 To add elements to a policy either add just the elements:
+
 ```go
 p.AllowElements("b", "strong")
 ```
@@ -166,45 +190,53 @@ Or using a regex:
 _Note: if an element is added by name as shown above, any matching regex will be ignored_
 
 It is also recommended to ensure multiple patterns don't overlap as order of execution is not guaranteed and can result in some rules being missed.
+
 ```go
 p.AllowElementsMatching(regex.MustCompile(`^my-element-`))
 ```
 
 Or add elements as a virtue of adding an attribute:
+
 ```go
 // Note the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("nowrap").OnElements("td", "th")
 ```
 
 Again, this also supports a regex pattern match alternative:
+
 ```go
 p.AllowAttrs("nowrap").OnElementsMatching(regex.MustCompile(`^my-element-`))
 ```
 
 Attributes can either be added to all elements:
+
 ```go
 p.AllowAttrs("dir").Matching(regexp.MustCompile("(?i)rtl|ltr")).Globally()
 ```
 
 Or attributes can be added to specific elements:
+
 ```go
 // Not the recommended pattern, see the recommendation on using .Matching() below
 p.AllowAttrs("value").OnElements("li")
 ```
 
 It is **always** recommended that an attribute be made to match a pattern. XSS in HTML attributes is very easy otherwise:
+
 ```go
 // \p{L} matches unicode letters, \p{N} matches unicode numbers
 p.AllowAttrs("title").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).Globally()
 ```
 
 You can stop at any time and call .Sanitize():
+
 ```go
 // string htmlIn passed in from a HTTP POST
 htmlOut := p.Sanitize(htmlIn)
 ```
 
 And you can take any existing policy and extend it:
+
 ```go
 p := bluemonday.UGCPolicy()
 p.AllowElements("fieldset", "select", "option")
@@ -212,13 +244,14 @@ p.AllowElements("fieldset", "select", "option")
 
 ### Inline CSS
 
-Although it's possible to handle inline CSS using `AllowAttrs` with a `Matching` rule, writing a single monolithic regular expression to safely process all inline CSS which you wish to allow is not a trivial task.  Instead of attempting to do so, you can allow the `style` attribute on whichever element(s) you desire and use style policies to control and sanitize inline styles.
+Although it's possible to handle inline CSS using `AllowAttrs` with a `Matching` rule, writing a single monolithic regular expression to safely process all inline CSS which you wish to allow is not a trivial task. Instead of attempting to do so, you can allow the `style` attribute on whichever element(s) you desire and use style policies to control and sanitize inline styles.
 
 It is strongly recommended that you use `Matching` (with a suitable regular expression)
 `MatchingEnum`, or `MatchingHandler` to ensure each style matches your needs,
 but default handlers are supplied for most widely used styles.
 
 Similar to attributes, you can allow specific CSS properties to be set inline:
+
 ```go
 p.AllowAttrs("style").OnElements("span", "p")
 // Allow the 'color' property with valid RGB(A) hex values only (on any element allowed a 'style' attribute)
@@ -226,6 +259,7 @@ p.AllowStyles("color").Matching(regexp.MustCompile("(?i)^#([0-9a-f]{3,4}|[0-9a-f
 ```
 
 Additionally, you can allow a CSS property to be set only to an allowed value:
+
 ```go
 p.AllowAttrs("style").OnElements("span", "p")
 // Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
@@ -234,6 +268,7 @@ p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none
 ```
 
 Or you can specify elements based on a regex pattern match:
+
 ```go
 p.AllowAttrs("style").OnElementsMatching(regex.MustCompile(`^my-element-`))
 // Allow the 'text-decoration' property to be set to 'underline', 'line-through' or 'none'
@@ -244,6 +279,7 @@ p.AllowStyles("text-decoration").MatchingEnum("underline", "line-through", "none
 If you need more specific checking, you can create a handler that takes in a string and returns a bool to
 validate the values for a given property. The string parameter has been
 converted to lowercase and unicode code points have been converted.
+
 ```go
 myHandler := func(value string) bool{
 	// Validate your input here
@@ -259,6 +295,7 @@ p.AllowStyles("color").MatchingHandler(myHandler).Globally()
 Links are difficult beasts to sanitise safely and also one of the biggest attack vectors for malicious content.
 
 It is possible to do this:
+
 ```go
 p.AllowAttrs("href").Matching(regexp.MustCompile(`(?i)mailto|https?`)).OnElements("a")
 ```
@@ -268,34 +305,39 @@ But that will not protect you as the regular expression is insufficient in this 
 We provide some additional global options for safely working with links.
 
 `RequireParseableURLs` will ensure that URLs are parseable by Go's `net/url` package:
+
 ```go
 p.RequireParseableURLs(true)
 ```
 
 If you have enabled parseable URLs then the following option will `AllowRelativeURLs`. By default this is disabled (bluemonday is an allowlist tool... you need to explicitly tell us to permit things) and when disabled it will prevent all local and scheme relative URLs (i.e. `href="localpage.html"`, `href="../home.html"` and even `href="//www.google.com"` are relative):
+
 ```go
 p.AllowRelativeURLs(true)
 ```
 
 If you have enabled parseable URLs then you can allow the schemes (commonly called protocol when thinking of `http` and `https`) that are permitted. Bear in mind that allowing relative URLs in the above option will allow for a blank scheme:
+
 ```go
 p.AllowURLSchemes("mailto", "http", "https")
 ```
 
 Regardless of whether you have enabled parseable URLs, you can force all URLs to have a rel="nofollow" attribute. This will be added if it does not exist, but only when the `href` is valid:
+
 ```go
 // This applies to "a" "area" "link" elements that have a "href" attribute
 p.RequireNoFollowOnLinks(true)
 ```
 
 Similarly, you can force all URLs to have "noreferrer" in their rel attribute.
+
 ```go
 // This applies to "a" "area" "link" elements that have a "href" attribute
 p.RequireNoReferrerOnLinks(true)
 ```
 
-
 We provide a convenience method that applies all of the above, but you will still need to allow the linkable elements for the URL rules to be applied to:
+
 ```go
 p.AllowStandardURLs()
 p.AllowAttrs("cite").OnElements("blockquote", "q")
@@ -306,7 +348,9 @@ p.AllowAttrs("src").OnElements("img")
 An additional complexity regarding links is the data URI as defined in [RFC2397](http://tools.ietf.org/html/rfc2397). The data URI allows for images to be served inline using this format:
 
 ```html
-<img src="data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=">
+<img
+  src="data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA="
+/>
 ```
 
 We have provided a helper to verify the mimetype followed by base64 content of data URIs links:
@@ -320,6 +364,7 @@ That helper will enable GIF, JPEG, PNG and WEBP images.
 It should be noted that there is a potential [security](https://web.archive.org/web/20120427103111/http://palizine.plynt.com/issues/2010Oct/bypass-xss-filters/) [risk](https://capec.mitre.org/data/definitions/244.html) with the use of data URI links. You should only enable data URI links if you already trust the content.
 
 We also have some features to help deal with user generated content:
+
 ```go
 p.AddTargetBlankToFullyQualifiedLinks(true)
 ```
@@ -331,6 +376,7 @@ Additionally any link that has `target="_blank"` after the policy has been appli
 ### Policy Building Helpers
 
 We also bundle some helpers to simplify policy building:
+
 ```go
 
 // Permits the "dir", "id", "lang", "title" attributes globally
@@ -349,6 +395,7 @@ p.AllowTables()
 ### Invalid Instructions
 
 The following are invalid:
+
 ```go
 // This does not say where the attributes are allowed, you need to add
 // .Globally() or .OnElements(...)
@@ -377,8 +424,8 @@ It is not the job of bluemonday to fix your bad HTML, it is merely the job of bl
 
 ## TODO
 
-* Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that encapsulates 90% of what they're looking for but does more than they need, and to remove the extra things they do not want to make it 100% what they want
-* Investigate whether devs want a validating HTML mode, in which the HTML elements are not just transformed into a balanced tree (every start tag has a closing tag at the correct depth) but also that elements and character data appear only in their allowed context (i.e. that a `table` element isn't a descendent of a `caption`, that `colgroup`, `thead`, `tbody`, `tfoot` and `tr` are permitted, and that character data is not permitted)
+- Investigate whether devs want to blacklist elements and attributes. This would allow devs to take an existing policy (such as the `bluemonday.UGCPolicy()` ) that encapsulates 90% of what they're looking for but does more than they need, and to remove the extra things they do not want to make it 100% what they want
+- Investigate whether devs want a validating HTML mode, in which the HTML elements are not just transformed into a balanced tree (every start tag has a closing tag at the correct depth) but also that elements and character data appear only in their allowed context (i.e. that a `table` element isn't a descendent of a `caption`, that `colgroup`, `thead`, `tbody`, `tfoot` and `tr` are permitted, and that character data is not permitted)
 
 ## Long term goals
 
