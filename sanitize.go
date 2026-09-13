@@ -49,7 +49,19 @@ var (
 	dataAttributeInvalidChars = regexp.MustCompile("[A-Z;]+")
 	cssUnicodeChar            = regexp.MustCompile(`\\[0-9a-f]{1,6} ?`)
 	dataURIbase64Prefix       = regexp.MustCompile(`^data:[^,]*;base64,`)
+	numericNLEntity           = regexp.MustCompile(`(?i)&#0*10;|&#x0*a;`)
 )
+
+// Private-use sentinel so &#10; survives html.Tokenizer entity decoding (#216).
+const numericNLSentinel = "\uE000"
+
+func preserveNumericNL(s string) string {
+	return numericNLEntity.ReplaceAllString(s, numericNLSentinel)
+}
+
+func restoreNumericNL(s string) string {
+	return strings.ReplaceAll(s, numericNLSentinel, "&#10;")
+}
 
 // Sanitize takes a string that contains a HTML fragment or document and applies
 // the given policy allowlist.
@@ -62,7 +74,7 @@ func (p *Policy) Sanitize(s string) string {
 		return s
 	}
 
-	return p.sanitizeWithBuff(strings.NewReader(s)).String()
+	return restoreNumericNL(p.sanitizeWithBuff(strings.NewReader(preserveNumericNL(s))).String())
 }
 
 // SanitizeBytes takes a []byte that contains a HTML fragment or document and applies
@@ -76,7 +88,7 @@ func (p *Policy) SanitizeBytes(b []byte) []byte {
 		return b
 	}
 
-	return p.sanitizeWithBuff(bytes.NewReader(b)).Bytes()
+	return []byte(restoreNumericNL(p.sanitizeWithBuff(bytes.NewReader([]byte(preserveNumericNL(string(b))))).String()))
 }
 
 // SanitizeReader takes an io.Reader that contains a HTML fragment or document

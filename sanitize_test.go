@@ -4112,3 +4112,16 @@ func TestIssue208(t *testing.T) {
 			expected)
 	}
 }
+
+func TestIssue216NumericNewlineEntity(t *testing.T) {
+	policy := UGCPolicy()
+	in := "Hello, &#10; world &amp;#10;!"
+	out := policy.Sanitize(in)
+	want := "Hello, &#10; world &amp;#10;!"
+	if out != want {
+		t.Errorf("test failed;\ninput   : %q\noutput  : %q\nexpected: %q", in, out, want)
+	}
+	if out := policy.Sanitize("Hello, &#x0A; world"); out != "Hello, &#10; world" {
+		t.Errorf("hex entity: got %q", out)
+	}
+}
