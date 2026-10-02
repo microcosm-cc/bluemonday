@@ -4112,3 +4112,92 @@ func TestIssue208(t *testing.T) {
 			expected)
 	}
 }
+
+func TestIssue221(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/221
+	pDefault := NewPolicy()
+	pDefault.AllowElements("div")
+	pDefault.AllowAttrs("style").OnElements("div")
+	pDefault.AllowStyles("font-family", "color").OnElements("div")
+	pDefault.AllowStyles("text-align").
+		MatchingEnum("center", "left").OnElements("div")
+	pDefault.AllowStyles("font-size").
+		Matching(regexp.MustCompile(`^\d+px$`)).OnElements("div")
+
+	pEnabled := NewPolicy()
+	pEnabled.AllowElements("div")
+	pEnabled.AllowAttrs("style").OnElements("div")
+	pEnabled.AllowStyles("font-family", "color").OnElements("div")
+	pEnabled.AllowStyles("text-align").
+		MatchingEnum("center", "left").OnElements("div")
+	pEnabled.AllowStyles("font-size").
+		Matching(regexp.MustCompile(`^\d+px$`)).OnElements("div")
+	pEnabled.AllowImportantInStyles(true)
+
+	tests := []struct {
+		in          string
+		expectedDef string
+		expectedOpt string
+	}{
+		{
+			in:          `<div style="font-family: Arial, sans-serif !important;"></div>`,
+			expectedDef: `<div style="font-family: Arial, sans-serif"></div>`,
+			expectedOpt: `<div style="font-family: Arial, sans-serif !important"></div>`,
+		},
+		{
+			in:          `<div style="font-family: Arial, sans-serif !IMPORTANT;"></div>`,
+			expectedDef: `<div style="font-family: Arial, sans-serif"></div>`,
+			expectedOpt: `<div style="font-family: Arial, sans-serif !important"></div>`,
+		},
+		{
+			in:          `<div style="text-align: center !important;"></div>`,
+			expectedDef: `<div style="text-align: center"></div>`,
+			expectedOpt: `<div style="text-align: center !important"></div>`,
+		},
+		{
+			in:          `<div style="font-size: 14px !important;"></div>`,
+			expectedDef: `<div style="font-size: 14px"></div>`,
+			expectedOpt: `<div style="font-size: 14px !important"></div>`,
+		},
+		{
+			in:          `<div style="font-family: Arial; font-size: 14px !important;"></div>`,
+			expectedDef: `<div style="font-family: Arial; font-size: 14px"></div>`,
+			expectedOpt: `<div style="font-family: Arial; font-size: 14px !important"></div>`,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests) * 2)
+	for ii, tt := range tests {
+		go func(ii int, tt struct {
+			in          string
+			expectedDef string
+			expectedOpt string
+		}) {
+			outDef := pDefault.Sanitize(tt.in)
+			if outDef != tt.expectedDef {
+				t.Errorf(
+					"default test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					outDef,
+					tt.expectedDef,
+				)
+			}
+			wg.Done()
+
+			outOpt := pEnabled.Sanitize(tt.in)
+			if outOpt != tt.expectedOpt {
+				t.Errorf(
+					"opt-in test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					outOpt,
+					tt.expectedOpt,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+}

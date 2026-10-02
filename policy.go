@@ -94,6 +94,9 @@ type Policy struct {
 	// When true, allow comments.
 	allowComments bool
 
+	// When true, allow !important in inline styles.
+	allowImportantInStyles bool
+
 	// map[htmlElementName]map[htmlAttributeName][]attrPolicy
 	elsAndAttrs map[string]map[string][]attrPolicy
 
@@ -550,6 +553,17 @@ func (spb *stylePolicyBuilder) Globally() *Policy {
 	}
 
 	return spb.p
+}
+
+// AllowImportantInStyles defines whether !important declarations are permitted
+// in style attributes. By default, !important declarations are stripped for
+// security reasons.
+func (p *Policy) AllowImportantInStyles(allow bool) *Policy {
+	p.init()
+
+	p.allowImportantInStyles = allow
+
+	return p
 }
 
 // AllowElements will append HTML elements to the allowlist without applying an

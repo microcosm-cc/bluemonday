@@ -297,3 +297,123 @@ func TestStyleOnElementMatching(t *testing.T) {
 		}
 	}
 }
+
+func TestAllowImportantInStyles(t *testing.T) {
+	tests := []struct {
+		name     string
+		policyFn func(p *Policy)
+		in       string
+		expected string
+	}{
+		{
+			name: "Default policy strips !important",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family", "color").OnElements("div")
+			},
+			in:       `<div style="font-family: Arial, sans-serif !important;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles retains !important on allowed element styles",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family", "color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="font-family: Arial, sans-serif !important;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif !important"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles does not add !important when not present",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family", "color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="font-family: Arial, sans-serif;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles mixed declarations",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family", "color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="font-family: Arial, sans-serif !important; color: red;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif !important; color: red"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles both declarations important",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family", "color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="font-family: Arial, sans-serif !important; color: red !important;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif !important; color: red !important"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles globally allowed styles",
+			policyFn: func(p *Policy) {
+				p.AllowElements("span")
+				p.AllowAttrs("style").Globally()
+				p.AllowStyles("color").Globally()
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<span style="color: blue !important;">test</span>`,
+			expected: `<span style="color: blue !important">test</span>`,
+		},
+		{
+			name: "AllowImportantInStyles strips disallowed properties even with !important",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="evil: bad !important; color: red !important;"></div>`,
+			expected: `<div style="color: red !important"></div>`,
+		},
+		{
+			name: "AllowImportantInStyles strips invalid property value with !important",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("color").OnElements("div")
+				p.AllowImportantInStyles(true)
+			},
+			in:       `<div style="color: invalid-color-123 !important;"></div>`,
+			expected: `<div></div>`,
+		},
+		{
+			name: "AllowImportantInStyles disabled after enabled strips !important",
+			policyFn: func(p *Policy) {
+				p.AllowElements("div")
+				p.AllowAttrs("style").OnElements("div")
+				p.AllowStyles("font-family").OnElements("div")
+				p.AllowImportantInStyles(true)
+				p.AllowImportantInStyles(false)
+			},
+			in:       `<div style="font-family: Arial, sans-serif !important;"></div>`,
+			expected: `<div style="font-family: Arial, sans-serif"></div>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewPolicy()
+			tt.policyFn(p)
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf("\ninput   : %s\noutput  : %s\nexpected: %s", tt.in, out, tt.expected)
+			}
+		})
+	}
+}

@@ -846,21 +846,25 @@ decLoop:
 		for _, i := range prefixes {
 			tempProperty = strings.TrimPrefix(tempProperty, i)
 		}
+		cleanVal := dec.Property + ": " + dec.Value
+		if p.allowImportantInStyles && dec.Important {
+			cleanVal += " !important"
+		}
 		if spl, ok := sps[tempProperty]; ok {
 			for _, sp := range spl {
 				if sp.handler != nil {
 					if sp.handler(tempValue) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				} else if len(sp.enum) > 0 {
 					if stringInSlice(tempValue, sp.enum) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				} else if sp.regexp != nil {
 					if sp.regexp.MatchString(tempValue) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				}
@@ -870,17 +874,17 @@ decLoop:
 			for _, sp := range spl {
 				if sp.handler != nil {
 					if sp.handler(tempValue) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				} else if len(sp.enum) > 0 {
 					if stringInSlice(tempValue, sp.enum) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				} else if sp.regexp != nil {
 					if sp.regexp.MatchString(tempValue) {
-						clean = append(clean, dec.Property+": "+dec.Value)
+						clean = append(clean, cleanVal)
 						continue decLoop
 					}
 				}
