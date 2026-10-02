@@ -151,6 +151,8 @@ type Policy struct {
 
 	setOfElementsToSkipContent map[string]struct{}
 
+	setOfElementsToAddSpaces map[string]struct{}
+
 	// Permits fundamentally unsafe elements.
 	//
 	// If false (default) then elements such as `style` and `script` will not be
@@ -239,6 +241,7 @@ func (p *Policy) init() {
 		p.allowURLSchemeRegexps = make([]*regexp.Regexp, 0)
 		p.setOfElementsAllowedWithoutAttrs = make(map[string]struct{})
 		p.setOfElementsToSkipContent = make(map[string]struct{})
+		p.setOfElementsToAddSpaces = make(map[string]struct{})
 		p.initialized = true
 	}
 }
@@ -819,6 +822,45 @@ func (p *Policy) AddSpaceWhenStrippingTag(allow bool) *Policy {
 	p.addSpaces = allow
 
 	return p
+}
+
+// AddSpaceWhenStrippingElements states that the specified HTML elements, when stripped
+// by the policy, should be replaced with a single space " ".
+//
+// This is useful if you expect to strip tags in dense markup and want to preserve
+// word boundaries for specific block elements (such as <div>, <p>, <br>, <li>) without
+// introducing whitespace for inline elements (such as <span>, <em>).
+//
+// For example: "<div>Hello</div><span>World</span>" would be sanitized to
+// " Hello World" if "div" is specified to be replaced with space, but "span" is not.
+func (p *Policy) AddSpaceWhenStrippingElements(names ...string) *Policy {
+
+	p.init()
+
+	for _, element := range names {
+		element = strings.ToLower(element)
+
+		if _, ok := p.setOfElementsToAddSpaces[element]; !ok {
+			p.setOfElementsToAddSpaces[element] = struct{}{}
+		}
+	}
+
+	return p
+}
+
+// AddSpaceWhenStrippingTags is an alias for AddSpaceWhenStrippingElements.
+func (p *Policy) AddSpaceWhenStrippingTags(names ...string) *Policy {
+	return p.AddSpaceWhenStrippingElements(names...)
+}
+
+// ReplaceStrippedElementsWithSpace is an alias for AddSpaceWhenStrippingElements.
+func (p *Policy) ReplaceStrippedElementsWithSpace(names ...string) *Policy {
+	return p.AddSpaceWhenStrippingElements(names...)
+}
+
+// ReplaceStrippedTagsWithSpace is an alias for AddSpaceWhenStrippingElements.
+func (p *Policy) ReplaceStrippedTagsWithSpace(names ...string) *Policy {
+	return p.AddSpaceWhenStrippingElements(names...)
 }
 
 // SkipElementsContent adds the HTML elements whose tags is needed to be removed

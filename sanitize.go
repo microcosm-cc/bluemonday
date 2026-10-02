@@ -277,7 +277,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 						skipElementContent = true
 						skippingElementsCount++
 					}
-					if p.addSpaces {
+					if p.shouldAddSpace(token.Data) {
 						if _, err := buff.WriteString(" "); err != nil {
 							return err
 						}
@@ -294,7 +294,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				if !p.allowNoAttrs(token.Data) {
 					skipClosingTag = true
 					closingTagToSkipStack = append(closingTagToSkipStack, token.Data)
-					if p.addSpaces {
+					if p.shouldAddSpace(token.Data) {
 						if _, err := buff.WriteString(" "); err != nil {
 							return err
 						}
@@ -331,7 +331,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 				if len(closingTagToSkipStack) == 0 {
 					skipClosingTag = false
 				}
-				if p.addSpaces {
+				if p.shouldAddSpace(token.Data) {
 					if _, err := buff.WriteString(" "); err != nil {
 						return err
 					}
@@ -354,7 +354,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 					}
 				}
 				if !match {
-					if p.addSpaces {
+					if p.shouldAddSpace(token.Data) {
 						if _, err := buff.WriteString(" "); err != nil {
 							return err
 						}
@@ -386,7 +386,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 			if !ok {
 				aa, matched := p.matchRegex(token.Data)
 				if !matched {
-					if p.addSpaces && !matched {
+					if p.shouldAddSpace(token.Data) && !matched {
 						if _, err := buff.WriteString(" "); err != nil {
 							return err
 						}
@@ -401,7 +401,7 @@ func (p *Policy) sanitize(r io.Reader, w io.Writer) error {
 			}
 
 			if len(token.Attr) == 0 && !p.allowNoAttrs(token.Data) {
-				if p.addSpaces {
+				if p.shouldAddSpace(token.Data) {
 					if _, err := buff.WriteString(" "); err != nil {
 						return err
 					}
@@ -906,6 +906,21 @@ func (p *Policy) allowNoAttrs(elementName string) bool {
 		}
 	}
 	return ok
+}
+
+func (p *Policy) shouldAddSpace(elementName string) bool {
+	if p.addSpaces {
+		return true
+	}
+	if len(p.setOfElementsToAddSpaces) > 0 {
+		if _, ok := p.setOfElementsToAddSpaces[elementName]; ok {
+			return true
+		}
+		if _, ok := p.setOfElementsToAddSpaces[strings.ToLower(elementName)]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Policy) validURL(rawurl string) (string, bool) {

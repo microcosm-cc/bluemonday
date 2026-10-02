@@ -1368,6 +1368,85 @@ func TestAddSpaces(t *testing.T) {
 	wg.Wait()
 }
 
+func TestAddSpaceWhenStrippingElements(t *testing.T) {
+	p := StrictPolicy()
+	p.AddSpaceWhenStrippingElements("div", "p", "br", "li")
+
+	tests := []test{
+		{
+			in:       `<div>Hello</div><div>World</div>`,
+			expected: ` Hello  World `,
+		},
+		{
+			in:       `<span>Hello</span><span>World</span>`,
+			expected: `HelloWorld`,
+		},
+		{
+			in:       `<div>Hello</div><span>World</span>`,
+			expected: ` Hello World`,
+		},
+		{
+			in:       `<p>Hello</p><p>World</p>`,
+			expected: ` Hello  World `,
+		},
+		{
+			in:       `<p>Hello<br>World</p>`,
+			expected: ` Hello World `,
+		},
+		{
+			in:       `Hello<br/>World`,
+			expected: `Hello World`,
+		},
+		{
+			in:       `<ul><li>One</li><li>Two</li></ul>`,
+			expected: ` One  Two `,
+		},
+		{
+			in:       `<div>Go with<em>out</em></div><div>me</div>`,
+			expected: ` Go without  me `,
+		},
+		{
+			in:       `<DIV>Hello</DIV><P>World</P>`,
+			expected: ` Hello  World `,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(tests))
+	for ii, tt := range tests {
+		go func(ii int, tt test) {
+			out := p.Sanitize(tt.in)
+			if out != tt.expected {
+				t.Errorf(
+					"test %d failed;\ninput   : %s\noutput  : %s\nexpected: %s",
+					ii,
+					tt.in,
+					out,
+					tt.expected,
+				)
+			}
+			wg.Done()
+		}(ii, tt)
+	}
+	wg.Wait()
+
+	// Verify alias methods
+	pTags := StrictPolicy().AddSpaceWhenStrippingTags("div")
+	if out := pTags.Sanitize(`<div>Hello</div><span>World</span>`); out != ` Hello World` {
+		t.Errorf("AddSpaceWhenStrippingTags failed: %s", out)
+	}
+
+	pReplaceEl := StrictPolicy().ReplaceStrippedElementsWithSpace("div")
+	if out := pReplaceEl.Sanitize(`<div>Hello</div><span>World</span>`); out != ` Hello World` {
+		t.Errorf("ReplaceStrippedElementsWithSpace failed: %s", out)
+	}
+
+	pReplaceTags := StrictPolicy().ReplaceStrippedTagsWithSpace("div")
+	if out := pReplaceTags.Sanitize(`<div>Hello</div><span>World</span>`); out != ` Hello World` {
+		t.Errorf("ReplaceStrippedTagsWithSpace failed: %s", out)
+	}
+}
+
 func TestTargetBlankNoOpener(t *testing.T) {
 	p := UGCPolicy()
 	p.AddTargetBlankToFullyQualifiedLinks(true)
