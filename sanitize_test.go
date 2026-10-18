@@ -4112,3 +4112,24 @@ func TestIssue208(t *testing.T) {
 			expected)
 	}
 }
+
+
+func TestMailtoFullyQualifiedLinks(t *testing.T) {
+	p := NewPolicy()
+	p.AllowAttrs("href").OnElements("a")
+	p.AllowURLSchemes("mailto", "https")
+	p.RequireNoReferrerOnFullyQualifiedLinks(true)
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+
+	got := p.Sanitize(`<a href="mailto:email@example.com">email@example.com</a>`)
+	want := `<a href="mailto:email@example.com" rel="noreferrer noopener" target="_blank">email@example.com</a>`
+	if got != want {
+		t.Fatalf("mailto fully-qualified\n got: %s\nwant: %s", got, want)
+	}
+
+	got = p.Sanitize(`<a href="https://example.com">example.com</a>`)
+	want = `<a href="https://example.com" rel="noreferrer noopener" target="_blank">example.com</a>`
+	if got != want {
+		t.Fatalf("https fully-qualified\n got: %s\nwant: %s", got, want)
+	}
+}
