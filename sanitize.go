@@ -620,7 +620,10 @@ attrsLoop:
 						if err != nil {
 							continue
 						}
-						if u.Host != "" {
+						// Host is set for http(s)/protocol-relative links. mailto:
+						// URLs are opaque in Go (Host == ""), so treat those as
+						// fully qualified too (issue #231).
+						if u.Host != "" || (u.Scheme == "mailto" && u.Opaque != "") {
 							externalLink = true
 						}
 
