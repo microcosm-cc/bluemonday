@@ -1094,7 +1094,7 @@ func FontHandler(value string) bool {
 	if in([]string{value}, values) {
 		return true
 	}
-	splitVals := strings.Split(value, " ")
+	splitVals := strings.Fields(value)
 	newSplitVals := []string{}
 	for _, i := range splitVals {
 		if len(strings.Split(i, "/")) == 2 {
