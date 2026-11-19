@@ -4112,3 +4112,31 @@ func TestIssue208(t *testing.T) {
 			expected)
 	}
 }
+
+func TestStringInSlice(t *testing.T) {
+	// https://github.com/microcosm-cc/bluemonday/issues/94
+	haystack := []string{"foo", "BAR", "bAz"}
+
+	tests := []struct {
+		needle   string
+		expected bool
+	}{
+		{"foo", true},
+		{"FOO", true},
+		{"Foo", true},
+		{"bar", true},
+		{"BAR", true},
+		{"Bar", true},
+		{"baz", true},
+		{"BAZ", true},
+		{"Baz", true},
+		{"qux", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		if got := stringInSlice(tt.needle, haystack); got != tt.expected {
+			t.Errorf("stringInSlice(%q, %v) = %v, want %v", tt.needle, haystack, got, tt.expected)
+		}
+	}
+}
